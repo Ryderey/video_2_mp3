@@ -1,0 +1,7 @@
+# ffmpeg.exe 由用户自行下载放入 bin 目录，体积大且与系统环境隔离，不纳入版本控制
+bin/ffmpeg.exe
+bin/ffmpeg*.exe
+bin/*.exe
+
+# 运行时生成的调试日志
+debug.log

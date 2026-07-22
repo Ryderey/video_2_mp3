@@ -1,0 +1,7 @@
+请将兼容 Win7 32位的静态版 ffmpeg.exe 放到这个 bin 文件夹里。
+
+下载地址（任选其一）：
+- https://www.gyan.dev/ffmpeg/builds/ （找 32位静态版）
+- https://github.com/BtbN/FFmpeg-Builds/releases （找 win32 版本）
+
+注意：必须是 32 位（x86）版本，64 位无法在 32 位系统上运行。

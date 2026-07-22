@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>糖豆链接转 MP3</title>
+<HTA:APPLICATION
+    ID="oApp"
+    APPLICATIONNAME="TangdouToMP3"
+    BORDERSTYLE="normal"
+    CAPTION="yes"
+    MAXIMIZEBUTTON="yes"
+    MINIMIZEBUTTON="yes"
+    SCROLL="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes" />
+<style type="text/css">
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
+        font-size: 17px;
+        line-height: 1.5;
+        background: #eef2f5;
+        color: #1c2733;
+        -ms-user-select: none;
+    }
+    #hdr {
+        background: #0d6e63;
+        color: #fff;
+        padding: 16px 26px;
+        border-bottom: 4px solid #0a574f;
+    }
+    #note {
+        display: inline-block;
+        vertical-align: middle;
+        width: 54px; height: 54px;
+        line-height: 52px;
+        text-align: center;
+        font-size: 30px;
+        background: #ffffff;
+        color: #0d6e63;
+        border-radius: 50%;
+        margin-right: 16px;
+    }
+    #hdrtxt { display: inline-block; vertical-align: middle; }
+    #title {
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        font-size: 30px;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+    #subtitle { font-size: 15px; color: #cfe8e4; }
+    .wrap { padding: 20px 26px; }
+    .row { margin-bottom: 16px; }
+    .lbl { font-weight: bold; }
+    .btn {
+        font-family: inherit;
+        font-size: 18px;
+        font-weight: bold;
+        padding: 10px 24px;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #1c2733;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+    .btn:hover { background: #e7f2f0; border-color: #0d6e63; }
+    .btn[disabled] { color: #a5adb5; background: #eef0f2; border-color: #cfd5da; cursor: default; }
+    .btn-primary {
+        background: #e8770d;
+        border-color: #c9650a;
+        color: #fff;
+        font-size: 20px;
+        padding: 12px 36px;
+    }
+    .btn-primary:hover { background: #f6851c; border-color: #e8770d; }
+    .btn-primary[disabled] { background: #e3c9a6; border-color: #d9c2a0; color: #fff; cursor: default; }
+    .path {
+        display: inline-block;
+        margin-left: 10px;
+        color: #4a5560;
+        vertical-align: middle;
+        max-width: 520px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 16px;
+    }
+    select {
+        font-family: inherit;
+        font-size: 17px;
+        padding: 6px 8px;
+        border: 2px solid #8a94a0;
+        border-radius: 6px;
+        background: #fff;
+        vertical-align: middle;
+    }
+    input[type=checkbox] { zoom: 1.4; vertical-align: middle; }
+    label { vertical-align: middle; cursor: pointer; margin-left: 4px; margin-right: 16px; }
+    #urlInput {
+        width: 100%;
+        height: 100px;
+        box-sizing: border-box;
+        font-family: "Consolas", "Microsoft YaHei", monospace;
+        font-size: 16px;
+        line-height: 1.6;
+        resize: vertical;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+    }
+    .barwrap {
+        width: 100%;
+        height: 28px;
+        border: 2px solid #8a94a0;
+        border-radius: 14px;
+        background: #fff;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    #bar {
+        height: 100%;
+        width: 0%;
+        background: #2f9e5f;
+        transition: width .3s;
+    }
+    #status { margin-top: 8px; font-size: 19px; font-weight: bold; color: #1c2733; }
+    #log {
+        width: 100%;
+        height: 160px;
+        box-sizing: border-box;
+        font-family: "Consolas", "Microsoft YaHei", monospace;
+        font-size: 15px;
+        line-height: 1.5;
+        resize: none;
+        background: #232a31;
+        color: #d7e0e8;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+    #banner {
+        display: none;
+        background: #fdecea;
+        border: 2px solid #e0a5a0;
+        border-left: 8px solid #c0392b;
+        color: #a02015;
+        padding: 12px 16px;
+        margin: 0 0 16px 0;
+        border-radius: 8px;
+        font-size: 17px;
+        line-height: 1.6;
+    }
+    .btn-adv {
+        background: #f0f4f7;
+        border-color: #a5b0ba;
+        color: #3a4750;
+        font-size: 16px;
+        padding: 8px 18px;
+    }
+    .btn-adv:hover { background: #e4ecf2; border-color: #7d8a94; }
+    #advBox {
+        background: #f7fafc;
+        border: 2px solid #c3cdd5;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+    }
+    #advBox .advtitle {
+        font-weight: bold;
+        font-size: 17px;
+        color: #0d6e63;
+        margin-bottom: 12px;
+    }
+    .advrow { margin-bottom: 12px; font-size: 17px; }
+    .advrow .unit { margin-left: 8px; color: #6b7680; font-size: 15px; }
+    .num {
+        font-family: inherit;
+        font-size: 18px;
+        width: 72px;
+        padding: 6px 8px;
+        margin: 0 6px;
+        border: 2px solid #8a94a0;
+        border-radius: 6px;
+        text-align: center;
+        vertical-align: middle;
+        background: #fff;
+    }
+    .hint { font-size: 15px; color: #6b7680; margin-top: 4px; }
+</style>
+
+<script language="JScript">
+// ================= 全局状态 =================
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var wsh = new ActiveXObject("WScript.Shell");
+
+var g_appDir   = "";
+var g_ffmpeg   = "";
+var g_outDir   = "";
+var g_progress = "";
+var g_batch    = "";
+var g_timer    = null;
+var g_reported = 0;
+var g_total    = 0;
+var g_debugLog = "";
+var g_tasks    = [];   // {vid, title, url, outFile}
+
+// ================= 工具函数 =================
+function $(id) { return document.getElementById(id); }
+
+function log(msg) {
+    var box = $("log");
+    box.value += msg + "\r\n";
+    box.scrollTop = box.scrollHeight;
+    dbg(msg);
+}
+
+function dbg(msg) {
+    var cb = $("debugLog");
+    if (cb == null || !cb.checked) return;
+    try {
+        var MAX  = 2 * 1024 * 1024;
+        var TAIL = 200000;
+        if (fso.FileExists(g_debugLog) && fso.GetFile(g_debugLog).Size > MAX) {
+            var text = readAllSafe(g_debugLog) || "";
+            var cut = text.length - TAIL;
+            if (cut < 0) cut = 0;
+            var nl = text.indexOf("\r\n", cut);
+            if (nl >= 0) cut = nl + 2;
+            var tail = text.substring(cut);
+            var tw = fso.CreateTextFile(g_debugLog, true, false);
+            tw.WriteLine("[" + new Date().toLocaleString() + "] [日志超过 2MB，已截断旧内容，仅保留最新记录]");
+            tw.Write(tail);
+            tw.Close();
+        }
+        var ts = fso.OpenTextFile(g_debugLog, 8, true, false);
+        ts.WriteLine("[" + new Date().toLocaleString() + "] " + msg);
+        ts.Close();
+    } catch (e) {}
+}
+
+function onDebugToggle() {
+    if ($("debugLog").checked) {
+        dbg("===== 调试日志已启用 =====");
+        dbg("程序目录: " + g_appDir);
+        dbg("ffmpeg 路径: " + g_ffmpeg + "  存在=" + fso.FileExists(g_ffmpeg));
+    }
+}
+
+function resolveAppDir() {
+    var href = decodeURIComponent(window.location.href);
+    var p = href.replace(/^file:\/*/i, "").replace(/\//g, "\\");
+    return fso.GetParentFolderName(p);
+}
+
+function setWindowSize(w, h) {
+    window.resizeTo(w, h);
+    window.moveTo(Math.floor((screen.availWidth - w) / 2),
+                  Math.floor((screen.availHeight - h) / 2));
+}
+
+function fitLog() {
+    var el = $("log");
+    var rect = el.getBoundingClientRect();
+    var viewH = document.documentElement.clientHeight;
+    var h = viewH - rect.top - 20;
+    if (h < 90) h = 90;
+    el.style.height = h + "px";
+}
+
+function escPct(s) { return s.replace(/%/g, "%%"); }
+
+function writeAnsi(path, content) {
+    var ts = fso.CreateTextFile(path, true, false);
+    ts.Write(content);
+    ts.Close();
+}
+
+function readAllSafe(path) {
+    try {
+        var ts = fso.OpenTextFile(path, 1, false);
+        var txt = ts.ReadAll();
+        ts.Close();
+        return txt;
+    } catch (e) { return null; }
+}
+
+function openFolder(path) {
+    try { wsh.Run("explorer.exe \"" + path + "\"", 1, false); } catch (e) {}
+}
+
+function onlyDigits() {
+    var k = event.keyCode;
+    if ((k >= 48 && k <= 57) || k == 8) return;
+    event.returnValue = false;
+}
+
+// 过滤 Windows 非法文件名字符
+function safeName(name) {
+    return name.replace(/[\\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+}
+
+// ================= vid 解析 =================
+function parseVid(input) {
+    input = input.replace(/^\s+|\s+$/g, "");
+    if (input == "") return null;
+    if (/^\d+$/.test(input)) return input;
+    var m = input.match(/[?&]vid=(\d+)/i);
+    if (m) return m[1];
+    // 尝试匹配路径中的纯数字段（兜底）
+    var m2 = input.match(/\/(\d{10,})/);
+    if (m2) return m2[1];
+    return null;
+}
+
+// ================= JSON 解析（IE8 兼容） =================
+function parseJson(text) {
+    try {
+        return eval("(" + text + ")");
+    } catch (e) {
+        return null;
+    }
+}
+
+// ================= 糖豆 API =================
+function getVideoInfo(vid) {
+    var apiUrl = "http://api-h5.tangdou.com/sample/share/main?vid=" + vid;
+    dbg("请求API: " + apiUrl);
+    try {
+        var xhr = new ActiveXObject("WinHttp.WinHttpRequest.5.1");
+        xhr.Open("GET", apiUrl, false);
+        xhr.SetRequestHeader("Accept", "application/json, text/plain, */*");
+        xhr.SetRequestHeader("Accept-Language", "zh,zh-CN;q=0.9");
+        xhr.SetRequestHeader("Referer", "https://www.tangdoucdn.com/");
+        xhr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
+        xhr.Send();
+        dbg("API响应状态: " + xhr.Status);
+        if (xhr.Status != 200) {
+            return { error: "API请求失败，状态码: " + xhr.Status };
+        }
+        var json = parseJson(xhr.ResponseText);
+        if (json == null) {
+            return { error: "API返回数据解析失败" };
+        }
+        if (json.code != 0 && json.code != 200) {
+            return { error: "API返回错误: " + (json.msg || json.message || "未知错误") };
+        }
+        var data = json.data;
+        if (!data || !data.video_url) {
+            return { error: "API未返回视频地址（视频可能已删除）" };
+        }
+        var title = data.title || ("tangdou_" + vid);
+        var videoUrl = data.video_url;
+        dbg("视频标题: " + title);
+        dbg("原始URL: " + videoUrl);
+        return { title: title, url: videoUrl, vid: vid };
+    } catch (e) {
+        dbg("API异常: " + e.message);
+        return { error: "网络请求异常: " + e.message };
+    }
+}
+
+// 清晰度降级：替换为最低画质（只要音频，省流量）
+function downgradeUrl(url) {
+    if (/_[HV]\d+P/i.test(url)) {
+        return url.replace(/_[HV]\d+P/i, "_V360P");
+    }
+    return url;
+}
+
+// ================= 构建音频滤镜 =================
+function buildAudioFilter(skipStart, skipEnd, repeat2) {
+    var parts = [];
+    if (skipStart > 0) {
+        parts.push("atrim=start=" + skipStart);
+        parts.push("asetpts=PTS-STARTPTS");
+    }
+    if (skipEnd > 0) {
+        parts.push("areverse");
+        parts.push("atrim=start=" + skipEnd);
+        parts.push("asetpts=PTS-STARTPTS");
+        parts.push("areverse");
+    }
+    if (repeat2) {
+        parts.push("aloop=loop=1:size=2000000000");
+        parts.push("asetpts=PTS-STARTPTS");
+    }
+    return parts.join(",");
+}
+
+// ================= 高级选项 =================
+function toggleAdv() {
+    var box = $("advBox");
+    var open = (box.style.display != "none");
+    box.style.display = open ? "none" : "block";
+    $("btnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
+    fitLog();
+}
+
+// ================= 输出目录 =================
+function pickOutDir() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "选择 MP3 输出目录", 0);
+    if (folder == null) return;
+    var self = folder.Self;
+    if (self == null || self.Path == "") {
+        alert("无法读取该文件夹路径，请选择普通磁盘文件夹。");
+        return;
+    }
+    g_outDir = self.Path;
+    $("outPath").innerText = g_outDir;
+    dbg("输出目录: " + g_outDir);
+}
+
+// ================= 启动检测 =================
+function init() {
+    var w = Math.floor(screen.availWidth * 0.92);
+    var h = Math.floor(screen.availHeight * 0.92);
+    if (w < 840) w = 840;
+    if (h < 640) h = 640;
+    setWindowSize(w, h);
+    window.onresize = fitLog;
+    g_appDir = resolveAppDir();
+    g_debugLog = g_appDir + "\\debug.log";
+    g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
+    var tmp = fso.GetSpecialFolder(2).Path;
+    g_progress = tmp + "\\tangdou_mp3_progress.log";
+    g_batch    = tmp + "\\tangdou_mp3_convert.bat";
+
+    // 默认输出目录 = 程序目录\Download
+    g_outDir = g_appDir + "\\Download";
+    if (!fso.FolderExists(g_outDir)) {
+        try { fso.CreateFolder(g_outDir); } catch (e) {}
+    }
+    $("outPath").innerText = g_outDir;
+
+    log("程序目录: " + g_appDir);
+    if (fso.FileExists(g_ffmpeg)) {
+        log("已找到 ffmpeg: bin\\ffmpeg.exe");
+    } else {
+        log("[错误] 未找到 bin\\ffmpeg.exe");
+        log("请下载 32 位静态版 ffmpeg，将 ffmpeg.exe 放入 bin 文件夹后重新打开本程序。");
+        $("banner").style.display = "block";
+        $("btnStart").disabled = true;
+    }
+    log("请在上方文本框中粘贴糖豆视频链接（每行一个），然后点击"开始转换"。");
+    fitLog();
+}
+
+// ================= 解析输入 =================
+function parseInputs() {
+    var text = $("urlInput").value;
+    var lines = text.split(/\r?\n/);
+    var vids = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].replace(/^\s+|\s+$/g, "");
+        if (line == "") continue;
+        var vid = parseVid(line);
+        if (vid != null) {
+            vids.push(vid);
+        } else {
+            log("[跳过] 无法识别的链接: " + line);
+        }
+    }
+    return vids;
+}
+
+// ================= 开始转换 =================
+function startConvert() {
+    if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
+
+    var vids = parseInputs();
+    if (vids.length == 0) {
+        alert("未找到有效的糖豆视频链接或vid编号。\n请粘贴包含 vid 参数的链接，或直接输入vid数字编号。");
+        return;
+    }
+
+    // 确保输出目录存在
+    if (!fso.FolderExists(g_outDir)) {
+        try { fso.CreateFolder(g_outDir); } catch (e) {
+            alert("无法创建输出目录: " + g_outDir);
+            return;
+        }
+    }
+
+    var bitrate = $("bitrate").value;
+    var skipStart = parseInt($("skipStart").value, 10);
+    if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
+    var skipEnd = parseInt($("skipEnd").value, 10);
+    if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
+    var repeat2 = $("repeat2").checked;
+    var useLowQ = $("lowQuality").checked;
+    var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
+
+    // 界面状态
+    $("btnStart").disabled = true;
+    $("bar").style.width = "0%";
+    $("status").innerText = "正在解析链接...";
+    g_tasks = [];
+    g_reported = 0;
+
+    log("---- 开始处理，共 " + vids.length + " 个链接 ----");
+    log("输出目录: " + g_outDir);
+    if (skipStart > 0) log("跳过前面 " + skipStart + " 秒");
+    if (skipEnd > 0) log("跳过后面 " + skipEnd + " 秒");
+    if (repeat2) log("剪切后重复拼接成 2 遍");
+
+    // 逐个调用 API 获取视频信息
+    var usedNames = {};
+    for (var i = 0; i < vids.length; i++) {
+        $("status").innerText = "正在解析 " + (i + 1) + " / " + vids.length + " ...";
+        log("[" + (i + 1) + "/" + vids.length + "] 解析 vid: " + vids[i]);
+
+        var info = getVideoInfo(vids[i]);
+        if (info.error) {
+            log("  [失败] " + info.error);
+            continue;
+        }
+
+        var videoUrl = info.url;
+        if (useLowQ) {
+            videoUrl = downgradeUrl(videoUrl);
+            dbg("降级URL: " + videoUrl);
+        }
+
+        // 生成安全文件名，重名加序号
+        var baseName = safeName(info.title);
+        if (baseName == "") baseName = "tangdou_" + info.vid;
+        var outName = baseName;
+        var n = 1;
+        while (usedNames[outName.toLowerCase()]) {
+            outName = baseName + "_" + n;
+            n++;
+        }
+        usedNames[outName.toLowerCase()] = true;
+
+        g_tasks.push({
+            vid: info.vid,
+            title: info.title,
+            url: videoUrl,
+            outFile: g_outDir + "\\" + outName + ".mp3"
+        });
+        log("  [OK] " + info.title);
+    }
+
+    g_total = g_tasks.length;
+    if (g_total == 0) {
+        log("---- 所有链接解析失败，无法继续 ----");
+        $("status").innerText = "解析失败";
+        $("btnStart").disabled = false;
+        return;
+    }
+
+    log("成功解析 " + g_total + " 个视频，开始下载转换...");
+    $("status").innerText = "0 / " + g_total + " 已完成";
+
+    // 生成批处理
+    var batchContent = buildBatch(bitrate, afilter);
+    dbg("批处理内容 >>>\r\n" + batchContent + "<<<");
+
+    // 清理旧文件
+    try { if (fso.FileExists(g_progress)) fso.DeleteFile(g_progress); } catch (e) {}
+    try { if (fso.FileExists(g_batch)) fso.DeleteFile(g_batch); } catch (e) {}
+    writeAnsi(g_batch, batchContent);
+
+    // 运行批处理
+    wsh.Run("\"" + g_batch + "\"", 7, false);
+    g_timer = window.setInterval(poll, 600);
+}
+
+// ================= 生成批处理 =================
+function buildBatch(bitrate, afilter) {
+    var nl = "\r\n";
+    var s = "@echo off" + nl;
+    s += ">\"" + g_progress + "\" echo [START]" + nl;
+
+    var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+
+    for (var i = 0; i < g_tasks.length; i++) {
+        var t = g_tasks[i];
+        var outPath = escPct(t.outFile);
+        var safeUrl = escPct(t.url);
+        // ffmpeg 直接读取 HTTP 流，通过 -headers 设置 Referer
+        var cmd = "\"" + g_ffmpeg + "\" -y"
+            + " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\""
+            + " -i \"" + safeUrl + "\""
+            + " -vn" + afArg
+            + " -acodec libmp3lame -ab " + bitrate + "k"
+            + " \"" + outPath + "\" >nul 2>&1";
+        s += cmd + nl;
+        s += "if errorlevel 1 (>>\"" + g_progress + "\" echo [FAIL]) else (>>\"" + g_progress + "\" echo [OK])" + nl;
+    }
+    s += ">>\"" + g_progress + "\" echo [DONE]" + nl;
+    return s;
+}
+
+// ================= 轮询进度 =================
+function poll() {
+    var txt = readAllSafe(g_progress);
+    if (txt == null) return;
+    var lines = txt.split(/\r?\n/);
+    var ok = 0, fail = 0, done = false;
+    var results = [];
+    for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        if (ln.indexOf("[OK]") == 0) { ok++; results.push(true); }
+        else if (ln.indexOf("[FAIL]") == 0) { fail++; results.push(false); }
+        else if (ln.indexOf("[DONE]") == 0) { done = true; }
+    }
+    var finished = ok + fail;
+
+    for (var k = g_reported; k < results.length && k < g_tasks.length; k++) {
+        var tag = results[k] ? "[OK]  " : "[FAIL]";
+        log(tag + " " + g_tasks[k].title + ".mp3");
+    }
+    g_reported = results.length;
+
+    var pct = g_total > 0 ? Math.floor(finished * 100 / g_total) : 0;
+    $("bar").style.width = pct + "%";
+    $("status").innerText = finished + " / " + g_total + " 已完成";
+
+    if (done) {
+        window.clearInterval(g_timer);
+        g_timer = null;
+        $("bar").style.width = "100%";
+        log("---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
+        $("btnStart").disabled = false;
+
+        if ($("openAfter").checked) {
+            openFolder(g_outDir);
+        }
+        alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。\n\nMP3 保存在: " + g_outDir);
+    }
+}
+</script>
+</head>
+
+<body onload="init()">
+    <div id="hdr">
+        <span id="note">&#9835;</span><span id="hdrtxt"><span id="title">糖豆链接转 MP3</span><br /><span id="subtitle">粘贴糖豆视频链接，自动下载并转成 MP3 音乐</span></span>
+    </div>
+
+    <div class="wrap">
+    <div id="banner">
+        <b>⚠ 缺少 ffmpeg.exe</b><br />
+        请下载 <b>32 位</b>静态版 ffmpeg，将 ffmpeg.exe 放入本程序目录下的 <b>bin</b> 文件夹，
+        然后重新打开本程序。
+    </div>
+
+    <div class="row">
+        <span class="lbl">粘贴糖豆视频链接（每行一个，也可直接输入vid编号）：</span>
+        <div class="hint">例如：https://www.tangdouddn.com/h5/play?vid=20000011230835 或 直接输入 20000011230835</div>
+        <textarea id="urlInput" placeholder="在此粘贴糖豆视频分享链接，每行一个..."></textarea>
+    </div>
+
+    <div class="row">
+        <span class="lbl">音质：</span>
+        <select id="bitrate">
+            <option value="128">128 kbps</option>
+            <option value="192" selected>192 kbps</option>
+            <option value="320">320 kbps</option>
+        </select>
+        &nbsp;&nbsp;
+        <input type="checkbox" id="lowQuality" checked />
+        <label for="lowQuality">使用最低画质（省流量，只要声音不影响）</label>
+    </div>
+
+    <div class="row">
+        <span class="lbl">输出目录：</span>
+        <button id="btnOutDir" class="btn" onclick="pickOutDir()">选择目录</button>
+        <span id="outPath" class="path"></span>
+    </div>
+
+    <div class="row">
+        <button id="btnAdv" class="btn btn-adv" onclick="toggleAdv()">收起高级选项</button>
+    </div>
+
+    <div id="advBox">
+        <div class="advtitle">高级选项（默认无需修改）</div>
+        <div class="advrow">
+            跳过前面<input type="text" id="skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            跳过后面<input type="text" id="skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒
+            <span class="unit">（填 0 表示不跳过，只支持整数秒，默认跳过前5秒广告）</span>
+        </div>
+        <div class="advrow">
+            <input type="checkbox" id="repeat2" />
+            <label for="repeat2">剪切后再重复拼接成 2 遍</label>
+        </div>
+    </div>
+
+    <div class="row">
+        <button id="btnStart" class="btn btn-primary" onclick="startConvert()">开始转换</button>
+        &nbsp;&nbsp;
+        <input type="checkbox" id="openAfter" checked />
+        <label for="openAfter">完成后打开文件夹</label>
+    </div>
+
+    <div class="row">
+        <div class="barwrap"><div id="bar"></div></div>
+        <div id="status">等待开始</div>
+    </div>
+
+    <div class="row">
+        <input type="checkbox" id="debugLog" onclick="onDebugToggle()" />
+        <label for="debugLog">记录调试日志（保存到程序目录 debug.log，排错用，默认关闭）</label>
+    </div>
+
+    <div class="row">
+        <textarea id="log" readonly></textarea>
+    </div>
+    </div>
+</body>
+</html>

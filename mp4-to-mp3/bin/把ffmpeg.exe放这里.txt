@@ -1,0 +1,16 @@
+请把 32 位版的 ffmpeg.exe 放到本文件夹（bin）里，最终路径应为：
+
+    bin\ffmpeg.exe
+
+获取方式（任选其一，都要选 32 位 / win32 / i686 版本）：
+
+1) https://www.gyan.dev/ffmpeg/builds/
+   下载 "release essentials" 里的 32 位版本，解压后在 bin 目录里
+   找到 ffmpeg.exe，复制到这里。
+
+2) 老系统若无法运行较新版本，可寻找较早的 32 位静态编译版本
+   （关键词：ffmpeg win32 static，例如 3.x / 4.x 版本），
+   这些版本对 Windows 7 兼容性更好。
+
+放好后，双击上层目录的 “MP4转MP3.hta” 即可使用。
+放置成功后可以删除本说明文件。

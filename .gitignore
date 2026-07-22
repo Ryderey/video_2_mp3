@@ -1,0 +1,9 @@
+# ffmpeg 二进制（用户自行下载）
+bin/ffmpeg.exe
+bin/ffprobe.exe
+
+# 输出目录
+Download/
+
+# 调试日志
+debug.log
