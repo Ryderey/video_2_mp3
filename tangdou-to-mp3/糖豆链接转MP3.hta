@@ -299,7 +299,7 @@ function onlyDigits() {
 
 // 过滤 Windows 非法文件名字符
 function safeName(name) {
-    return name.replace(/[\\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    return name.replace(/[\\\/:*?"<>|()!]/g, "_").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
 }
 
 // ================= vid 解析 =================
@@ -571,6 +571,8 @@ function startConvert() {
 }
 
 // ================= 生成批处理 =================
+// 使用 goto 跳转代替 if(...)else(...) 括号块，
+// 彻底避免 cmd.exe 对引号内 ) 字符的块解析陷阱
 function buildBatch(bitrate, afilter) {
     var nl = "\r\n";
     var s = "@echo off" + nl;
@@ -589,7 +591,12 @@ function buildBatch(bitrate, afilter) {
             + " -acodec libmp3lame -ab " + bitrate + "k"
             + " \"" + outPath + "\" >nul 2>&1";
         s += cmd + nl;
-        s += "if errorlevel 1 (>>\"" + g_progress + "\" echo [FAIL]) else (>>\"" + g_progress + "\" echo [OK])" + nl;
+        s += "if errorlevel 1 goto fail" + i + nl;
+        s += ">>\"" + g_progress + "\" echo [OK]" + nl;
+        s += "goto next" + i + nl;
+        s += ":fail" + i + nl;
+        s += ">>\"" + g_progress + "\" echo [FAIL]" + nl;
+        s += ":next" + i + nl;
     }
     s += ">>\"" + g_progress + "\" echo [DONE]" + nl;
     return s;
