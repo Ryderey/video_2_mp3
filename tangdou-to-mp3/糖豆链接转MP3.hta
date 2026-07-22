@@ -582,9 +582,8 @@ function buildBatch(bitrate, afilter) {
         var t = g_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        // ffmpeg 直接读取 HTTP 流，通过 -headers 设置 Referer
+        // ffmpeg 直接读取带签名的 HTTP 视频流（无需 Referer）
         var cmd = "\"" + g_ffmpeg + "\" -y"
-            + " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\""
             + " -i \"" + safeUrl + "\""
             + " -vn" + afArg
             + " -acodec libmp3lame -ab " + bitrate + "k"
