@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>视频转 MP3 工具</title>
+<HTA:APPLICATION
+    ID="oApp"
+    APPLICATIONNAME="VideoToMP3"
+    BORDERSTYLE="normal"
+    CAPTION="yes"
+    MAXIMIZEBUTTON="yes"
+    MINIMIZEBUTTON="yes"
+    SCROLL="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes" />
+<style type="text/css">
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
+        font-size: 17px;
+        line-height: 1.5;
+        background: #eef2f5;
+        color: #1c2733;
+        -ms-user-select: none;
+    }
+    #hdr {
+        background: #0d6e63;
+        color: #fff;
+        padding: 14px 26px;
+        border-bottom: 4px solid #0a574f;
+    }
+    #note {
+        display: inline-block; vertical-align: middle;
+        width: 48px; height: 48px; line-height: 46px;
+        text-align: center; font-size: 28px;
+        background: #fff; color: #0d6e63;
+        border-radius: 50%; margin-right: 14px;
+    }
+    #hdrtxt { display: inline-block; vertical-align: middle; }
+    #title { font-family: "SimHei", "Microsoft YaHei", sans-serif; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+    #subtitle { font-size: 14px; color: #cfe8e4; }
+    /* ---- Tab 栏 ---- */
+    #tabBar { padding: 12px 26px 0; background: #e8ecef; border-bottom: 2px solid #c3cdd5; }
+    .tab {
+        display: inline-block; padding: 10px 28px; font-size: 18px; font-weight: bold;
+        border: 2px solid #8a94a0; border-bottom: none; border-radius: 8px 8px 0 0;
+        background: #dde3e8; color: #3a4750; cursor: pointer; margin-right: 4px;
+        position: relative; top: 2px;
+    }
+    .tab.active { background: #eef2f5; color: #0d6e63; border-color: #0d6e63; }
+    /* ---- 通用 ---- */
+    .wrap { padding: 16px 26px; }
+    .row { margin-bottom: 14px; }
+    .lbl { font-weight: bold; }
+    .btn {
+        font-family: inherit; font-size: 18px; font-weight: bold;
+        padding: 10px 24px; border: 2px solid #8a94a0; border-radius: 8px;
+        background: #fff; color: #1c2733; cursor: pointer; vertical-align: middle;
+    }
+    .btn:hover { background: #e7f2f0; border-color: #0d6e63; }
+    .btn[disabled] { color: #a5adb5; background: #eef0f2; border-color: #cfd5da; cursor: default; }
+    .btn-primary { background: #e8770d; border-color: #c9650a; color: #fff; font-size: 20px; padding: 12px 36px; }
+    .btn-primary:hover { background: #f6851c; border-color: #e8770d; }
+    .btn-primary[disabled] { background: #e3c9a6; border-color: #d9c2a0; color: #fff; cursor: default; }
+    .path { display: inline-block; margin-left: 10px; color: #4a5560; vertical-align: middle; max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+    select { font-family: inherit; font-size: 17px; padding: 6px 8px; border: 2px solid #8a94a0; border-radius: 6px; background: #fff; vertical-align: middle; }
+    input[type=checkbox] { zoom: 1.4; vertical-align: middle; }
+    label { vertical-align: middle; cursor: pointer; margin-left: 4px; margin-right: 16px; }
+    .barwrap { width: 100%; height: 28px; border: 2px solid #8a94a0; border-radius: 14px; background: #fff; box-sizing: border-box; overflow: hidden; }
+    .bar { height: 100%; width: 0%; background: #2f9e5f; }
+    .status { margin-top: 8px; font-size: 19px; font-weight: bold; color: #1c2733; }
+    .logbox { width: 100%; height: 160px; box-sizing: border-box; font-family: "Consolas", "Microsoft YaHei", monospace; font-size: 15px; line-height: 1.5; resize: none; background: #232a31; color: #d7e0e8; border: 2px solid #8a94a0; border-radius: 8px; padding: 8px 10px; }
+    .banner { display: none; background: #fdecea; border: 2px solid #e0a5a0; border-left: 8px solid #c0392b; color: #a02015; padding: 12px 16px; margin: 0 0 14px 0; border-radius: 8px; font-size: 17px; line-height: 1.6; }
+    .btn-adv { background: #f0f4f7; border-color: #a5b0ba; color: #3a4750; font-size: 16px; padding: 8px 18px; }
+    .btn-adv:hover { background: #e4ecf2; border-color: #7d8a94; }
+    .advBox { background: #f7fafc; border: 2px solid #c3cdd5; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
+    .advBox .advtitle { font-weight: bold; font-size: 17px; color: #0d6e63; margin-bottom: 12px; }
+    .advrow { margin-bottom: 12px; font-size: 17px; }
+    .advrow .unit { margin-left: 8px; color: #6b7680; font-size: 15px; }
+    .num { font-family: inherit; font-size: 18px; width: 72px; padding: 6px 8px; margin: 0 6px; border: 2px solid #8a94a0; border-radius: 6px; text-align: center; vertical-align: middle; background: #fff; }
+    .found { font-family: "SimHei", "Microsoft YaHei", sans-serif; font-size: 24px; font-weight: bold; color: #0d6e63; }
+    .hint { font-size: 15px; color: #6b7680; margin-top: 4px; }
+    #urlInput { width: 100%; height: 90px; box-sizing: border-box; font-family: "Consolas", "Microsoft YaHei", monospace; font-size: 16px; line-height: 1.6; resize: vertical; border: 2px solid #8a94a0; border-radius: 8px; padding: 8px 10px; background: #fff; }
+</style>
+
+<script language="JScript">
+// ================= 共享全局 =================
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var wsh = new ActiveXObject("WScript.Shell");
+var g_appDir = "", g_ffmpeg = "", g_debugLog = "";
+var g_activeTab = "mp4"; // 当前活动 Tab
+
+// ================= 共享工具函数 =================
+function $(id) { return document.getElementById(id); }
+
+function log(panel, msg) {
+    var box = $(panel + "_log");
+    box.value += msg + "\r\n";
+    box.scrollTop = box.scrollHeight;
+    dbg(msg);
+}
+
+function dbg(msg) {
+    var cb = $("debugLog");
+    if (cb == null || !cb.checked) return;
+    try {
+        var MAX = 2 * 1024 * 1024, TAIL = 200000;
+        if (fso.FileExists(g_debugLog) && fso.GetFile(g_debugLog).Size > MAX) {
+            var text = readAllSafe(g_debugLog) || "";
+            var cut = text.length - TAIL;
+            if (cut < 0) cut = 0;
+            var nl = text.indexOf("\r\n", cut);
+            if (nl >= 0) cut = nl + 2;
+            var tail = text.substring(cut);
+            var tw = fso.CreateTextFile(g_debugLog, true, false);
+            tw.WriteLine("[" + new Date().toLocaleString() + "] [truncated]");
+            tw.Write(tail); tw.Close();
+        }
+        var ts = fso.OpenTextFile(g_debugLog, 8, true, false);
+        ts.WriteLine("[" + new Date().toLocaleString() + "] " + msg);
+        ts.Close();
+    } catch (e) {}
+}
+
+function onDebugToggle() {
+    if ($("debugLog").checked) {
+        dbg("===== debug enabled =====");
+        dbg("appDir: " + g_appDir);
+        dbg("ffmpeg: " + g_ffmpeg + " exists=" + fso.FileExists(g_ffmpeg));
+    }
+}
+
+function resolveAppDir() {
+    var href = decodeURIComponent(window.location.href);
+    var p = href.replace(/^file:\/*/i, "").replace(/\//g, "\\");
+    return fso.GetParentFolderName(p);
+}
+
+function setWindowSize(w, h) {
+    window.resizeTo(w, h);
+    window.moveTo(Math.floor((screen.availWidth - w) / 2), Math.floor((screen.availHeight - h) / 2));
+}
+
+function fitLog(panel) {
+    var el = $(panel + "_log");
+    if (!el || el.offsetParent === null) return;
+    var rect = el.getBoundingClientRect();
+    var viewH = document.documentElement.clientHeight;
+    var h = viewH - rect.top - 20;
+    if (h < 90) h = 90;
+    el.style.height = h + "px";
+}
+
+function escPct(s) { return s.replace(/%/g, "%%"); }
+function writeAnsi(path, content) { var ts = fso.CreateTextFile(path, true, false); ts.Write(content); ts.Close(); }
+function readAllSafe(path) { try { var ts = fso.OpenTextFile(path, 1, false); var t = ts.ReadAll(); ts.Close(); return t; } catch (e) { return null; } }
+function openFolder(path) { try { wsh.Run("explorer.exe \"" + path + "\"", 1, false); } catch (e) {} }
+function onlyDigits() { var k = event.keyCode; if ((k >= 48 && k <= 57) || k == 8) return; event.returnValue = false; }
+function safeName(name) { return name.replace(/[\\\/:*?"<>|()!]/g, "_").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, ""); }
+
+function buildAudioFilter(skipStart, skipEnd, repeat2) {
+    var parts = [];
+    if (skipStart > 0) { parts.push("atrim=start=" + skipStart); parts.push("asetpts=PTS-STARTPTS"); }
+    if (skipEnd > 0) { parts.push("areverse"); parts.push("atrim=start=" + skipEnd); parts.push("asetpts=PTS-STARTPTS"); parts.push("areverse"); }
+    if (repeat2) { parts.push("aloop=loop=1:size=2000000000"); parts.push("asetpts=PTS-STARTPTS"); }
+    return parts.join(",");
+}
+
+// ================= Tab 切换 =================
+function switchTab(id) {
+    g_activeTab = id;
+    $("panelMp4").style.display = (id == "mp4") ? "block" : "none";
+    $("panelTangdou").style.display = (id == "tangdou") ? "block" : "none";
+    $("tabMp4").className = (id == "mp4") ? "tab active" : "tab";
+    $("tabTangdou").className = (id == "tangdou") ? "tab active" : "tab";
+    fitLog(id);
+}
+
+// ================= 启动 =================
+function init() {
+    var w = Math.floor(screen.availWidth * 0.92);
+    var h = Math.floor(screen.availHeight * 0.92);
+    if (w < 860) w = 860;
+    if (h < 660) h = 660;
+    setWindowSize(w, h);
+    window.onresize = function() { fitLog(g_activeTab); };
+    g_appDir = resolveAppDir();
+    g_debugLog = g_appDir + "\\debug.log";
+    g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
+
+    log("mp4", "program dir: " + g_appDir);
+    if (fso.FileExists(g_ffmpeg)) {
+        log("mp4", "ffmpeg OK: bin\\ffmpeg.exe");
+        log("tangdou", "ffmpeg OK: bin\\ffmpeg.exe");
+    } else {
+        log("mp4", "[ERROR] bin\\ffmpeg.exe not found");
+        log("tangdou", "[ERROR] bin\\ffmpeg.exe not found");
+        $("banner").style.display = "block";
+        $("m_btnStart").disabled = true;
+        $("m_btnPick").disabled = true;
+        $("t_btnStart").disabled = true;
+    }
+    // init tangdou default output dir
+    t_outDir = g_appDir + "\\Download";
+    if (!fso.FolderExists(t_outDir)) { try { fso.CreateFolder(t_outDir); } catch(e){} }
+    $("t_outPath").innerText = t_outDir;
+    fitLog("mp4");
+}
+
+// ===================== MP4 模块 =====================
+var m_folder = "", m_files = [], m_total = 0;
+var m_progress = "", m_batch = "", m_timer = null, m_reported = 0;
+var m_outDir = "";
+
+function m_pickFolder() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "select MP4 folder", 0);
+    if (folder == null) return;
+    var self = folder.Self;
+    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    m_folder = self.Path;
+    $("m_path").innerText = m_folder;
+    m_rescan();
+}
+
+function m_rescan() {
+    if (m_folder == "") return;
+    m_files = [];
+    var recursive = $("m_recursive").checked;
+    m_scanFolder(m_folder, recursive, m_files);
+    m_total = m_files.length;
+    $("m_found").innerText = "found " + m_total + " MP4";
+    $("m_btnStart").disabled = (m_total == 0);
+    if (m_total == 0) log("mp4", "no MP4 found.");
+}
+
+function m_scanFolder(path, recursive, arr) {
+    var folder = fso.GetFolder(path);
+    var fe = new Enumerator(folder.Files);
+    for (; !fe.atEnd(); fe.moveNext()) { var f = fe.item(); if (/\.mp4$/i.test(f.Name)) arr.push(f); }
+    if (recursive) { var de = new Enumerator(folder.SubFolders); for (; !de.atEnd(); de.moveNext()) m_scanFolder(de.item().Path, true, arr); }
+}
+
+function m_toggleOutDir() {
+    var on = $("m_useOutDir").checked;
+    $("m_btnOutDir").disabled = !on;
+    if (!on) { m_outDir = ""; $("m_outPath").innerText = "(same as source)"; }
+    else if (m_outDir == "") m_pickOutDir();
+}
+
+function m_pickOutDir() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "select output dir", 0);
+    if (folder == null) { if (m_outDir == "") { $("m_useOutDir").checked = false; m_toggleOutDir(); } return; }
+    var self = folder.Self;
+    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    m_outDir = self.Path;
+    $("m_outPath").innerText = m_outDir;
+}
+
+function m_toggleAdv() {
+    var box = $("m_advBox");
+    var open = (box.style.display != "none");
+    box.style.display = open ? "none" : "block";
+    $("m_btnAdv").innerText = open ? "show advanced" : "hide advanced";
+    fitLog("mp4");
+}
+
+function m_onDeleteSrcToggle() {
+    var cb = $("m_deleteSrc");
+    if (cb.checked) { var yes = confirm("MP4 files will be moved to Recycle Bin after conversion.\nContinue?"); if (!yes) cb.checked = false; }
+}
+
+function m_computeOutPath(file, used) {
+    if (m_outDir != "") {
+        var dot = file.Name.lastIndexOf(".");
+        var baseName = (dot > 0) ? file.Name.substring(0, dot) : file.Name;
+        var candidate = m_outDir + "\\" + baseName + ".mp3";
+        var n = 1;
+        while (used[candidate.toLowerCase()]) { candidate = m_outDir + "\\" + baseName + "_" + n + ".mp3"; n++; }
+        used[candidate.toLowerCase()] = true;
+        return candidate;
+    }
+    var dot2 = file.Path.lastIndexOf(".");
+    var base2 = (dot2 > file.Path.lastIndexOf("\\")) ? file.Path.substring(0, dot2) : file.Path;
+    return base2 + ".mp3";
+}
+
+function m_buildBatch(bitrate, afilter) {
+    var nl = "\r\n", s = "@echo off" + nl;
+    s += ">\"" + m_progress + "\" echo [START]" + nl;
+    var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+    var used = {};
+    for (var i = 0; i < m_files.length; i++) {
+        var inPath = escPct(m_files[i].Path);
+        var outPath = escPct(m_computeOutPath(m_files[i], used));
+        s += "\"" + g_ffmpeg + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "if errorlevel 1 goto mfail" + i + nl;
+        s += ">>\"" + m_progress + "\" echo [OK]" + nl;
+        s += "goto mnext" + i + nl;
+        s += ":mfail" + i + nl;
+        s += ">>\"" + m_progress + "\" echo [FAIL]" + nl;
+        s += ":mnext" + i + nl;
+    }
+    s += ">>\"" + m_progress + "\" echo [DONE]" + nl;
+    return s;
+}
+
+function m_startConvert() {
+    if (m_total == 0) { alert("please select a folder first"); return; }
+    if (!fso.FileExists(g_ffmpeg)) { alert("ffmpeg not found"); return; }
+    var bitrate = $("m_bitrate").value;
+    var skipStart = parseInt($("m_skipStart").value, 10); if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
+    var skipEnd = parseInt($("m_skipEnd").value, 10); if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
+    var repeat2 = $("m_repeat2").checked;
+    var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
+    if ($("m_useOutDir").checked && m_outDir == "") { alert("please select output dir"); return; }
+    try { if (fso.FileExists(m_progress)) fso.DeleteFile(m_progress); } catch(e){}
+    try { if (fso.FileExists(m_batch)) fso.DeleteFile(m_batch); } catch(e){}
+    var batchContent = m_buildBatch(bitrate, afilter);
+    writeAnsi(m_batch, batchContent);
+    $("m_btnStart").disabled = true; $("m_btnPick").disabled = true;
+    $("m_bar").style.width = "0%"; $("m_status").innerText = "0 / " + m_total;
+    m_reported = 0;
+    log("mp4", "---- start " + m_total + " files, " + bitrate + "kbps ----");
+    wsh.Run("\"" + m_batch + "\"", 7, false);
+    m_timer = window.setInterval(m_poll, 500);
+}
+
+function m_poll() {
+    var txt = readAllSafe(m_progress); if (txt == null) return;
+    var lines = txt.split(/\r?\n/);
+    var ok = 0, fail = 0, done = false, results = [];
+    for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        if (ln.indexOf("[OK]") == 0) { ok++; results.push(true); }
+        else if (ln.indexOf("[FAIL]") == 0) { fail++; results.push(false); }
+        else if (ln.indexOf("[DONE]") == 0) done = true;
+    }
+    var finished = ok + fail;
+    for (var k = m_reported; k < results.length && k < m_files.length; k++) {
+        log("mp4", (results[k] ? "[OK]  " : "[FAIL]") + " " + m_files[k].Name);
+    }
+    m_reported = results.length;
+    var pct = m_total > 0 ? Math.floor(finished * 100 / m_total) : 0;
+    $("m_bar").style.width = pct + "%"; $("m_status").innerText = finished + " / " + m_total;
+    if (done) {
+        window.clearInterval(m_timer); m_timer = null;
+        $("m_bar").style.width = "100%";
+        log("mp4", "---- done: ok=" + ok + " fail=" + fail + " ----");
+        $("m_btnStart").disabled = (m_total == 0); $("m_btnPick").disabled = false;
+        if ($("m_deleteSrc").checked) {
+            var deleted = 0;
+            try { var shellApp = new ActiveXObject("Shell.Application"); var rb = shellApp.Namespace(10);
+                if (rb) { for (var dk = 0; dk < results.length && dk < m_files.length; dk++) { if (results[dk]) { try { rb.MoveHere(m_files[dk].Path, 0x14); deleted++; } catch(e){} } } }
+            } catch(e){}
+            if (deleted > 0) log("mp4", deleted + " files moved to Recycle Bin");
+        }
+        if ($("m_openAfter").checked) openFolder(m_outDir != "" ? m_outDir : m_folder);
+        alert("Done! ok=" + ok + " fail=" + fail);
+    }
+}
+
+// ===================== 糖豆模块 =====================
+var t_tasks = [], t_total = 0;
+var t_progress = "", t_batch = "", t_timer = null, t_reported = 0;
+var t_outDir = "";
+
+function t_parseVid(input) {
+    input = input.replace(/^\s+|\s+$/g, "");
+    if (input == "") return null;
+    if (/^\d+$/.test(input)) return input;
+    var m = input.match(/[?&]vid=(\d+)/i);
+    if (m) return m[1];
+    var m2 = input.match(/\/(\d{10,})/);
+    return m2 ? m2[1] : null;
+}
+
+function t_parseJson(text) { try { return eval("(" + text + ")"); } catch(e) { return null; } }
+
+function t_getVideoInfo(vid) {
+    var apiUrl = "http://api-h5.tangdou.com/sample/share/main?vid=" + vid;
+    try {
+        var xhr = new ActiveXObject("WinHttp.WinHttpRequest.5.1");
+        xhr.Open("GET", apiUrl, false);
+        xhr.SetRequestHeader("Accept", "application/json, text/plain, */*");
+        xhr.SetRequestHeader("Referer", "https://www.tangdoucdn.com/");
+        xhr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
+        xhr.Send();
+        if (xhr.Status != 200) return { error: "API status: " + xhr.Status };
+        var json = t_parseJson(xhr.ResponseText);
+        if (!json) return { error: "JSON parse failed" };
+        if (json.code != 0 && json.code != 200) return { error: "API error: " + (json.msg || "unknown") };
+        var data = json.data;
+        if (!data || !data.video_url) return { error: "no video_url" };
+        return { title: data.title || ("tangdou_" + vid), url: data.video_url, vid: vid };
+    } catch (e) { return { error: e.message }; }
+}
+
+function t_downgradeUrl(url) { return /_[HV]\d+P/i.test(url) ? url.replace(/_[HV]\d+P/i, "_V360P") : url; }
+
+function t_pickOutDir() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "select output dir", 0);
+    if (folder == null) return;
+    var self = folder.Self;
+    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    t_outDir = self.Path; $("t_outPath").innerText = t_outDir;
+}
+
+function t_toggleAdv() {
+    var box = $("t_advBox");
+    var open = (box.style.display != "none");
+    box.style.display = open ? "none" : "block";
+    $("t_btnAdv").innerText = open ? "show advanced" : "hide advanced";
+    fitLog("tangdou");
+}
+
+function t_buildBatch(bitrate, afilter) {
+    var nl = "\r\n", s = "@echo off" + nl;
+    s += ">\"" + t_progress + "\" echo [START]" + nl;
+    var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+    for (var i = 0; i < t_tasks.length; i++) {
+        var t = t_tasks[i];
+        var outPath = escPct(t.outFile);
+        var safeUrl = escPct(t.url);
+        s += "\"" + g_ffmpeg + "\" -y -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "if errorlevel 1 goto tfail" + i + nl;
+        s += ">>\"" + t_progress + "\" echo [OK]" + nl;
+        s += "goto tnext" + i + nl;
+        s += ":tfail" + i + nl;
+        s += ">>\"" + t_progress + "\" echo [FAIL]" + nl;
+        s += ":tnext" + i + nl;
+    }
+    s += ">>\"" + t_progress + "\" echo [DONE]" + nl;
+    return s;
+}
+
+function t_startConvert() {
+    if (!fso.FileExists(g_ffmpeg)) { alert("ffmpeg not found"); return; }
+    var text = $("urlInput").value;
+    var lines = text.split(/\r?\n/);
+    var vids = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].replace(/^\s+|\s+$/g, "");
+        if (line == "") continue;
+        var vid = t_parseVid(line);
+        if (vid) vids.push(vid);
+        else log("tangdou", "[skip] " + line);
+    }
+    if (vids.length == 0) { alert("no valid vid found"); return; }
+    if (!fso.FolderExists(t_outDir)) { try { fso.CreateFolder(t_outDir); } catch(e) { alert("cannot create dir"); return; } }
+    var bitrate = $("t_bitrate").value;
+    var skipStart = parseInt($("t_skipStart").value, 10); if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
+    var skipEnd = parseInt($("t_skipEnd").value, 10); if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
+    var repeat2 = $("t_repeat2").checked;
+    var useLowQ = $("t_lowQuality").checked;
+    var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
+    $("t_btnStart").disabled = true; $("t_bar").style.width = "0%"; $("t_status").innerText = "parsing...";
+    t_tasks = []; t_reported = 0;
+    log("tangdou", "---- " + vids.length + " links ----");
+    var usedNames = {};
+    for (var j = 0; j < vids.length; j++) {
+        $("t_status").innerText = "parsing " + (j+1) + "/" + vids.length;
+        var info = t_getVideoInfo(vids[j]);
+        if (info.error) { log("tangdou", "  [FAIL] " + info.error); continue; }
+        var videoUrl = useLowQ ? t_downgradeUrl(info.url) : info.url;
+        var baseName = safeName(info.title); if (baseName == "") baseName = "tangdou_" + info.vid;
+        var outName = baseName, n = 1;
+        while (usedNames[outName.toLowerCase()]) { outName = baseName + "_" + n; n++; }
+        usedNames[outName.toLowerCase()] = true;
+        t_tasks.push({ vid: info.vid, title: info.title, url: videoUrl, outFile: t_outDir + "\\" + outName + ".mp3" });
+        log("tangdou", "  [OK] " + info.title);
+    }
+    t_total = t_tasks.length;
+    if (t_total == 0) { log("tangdou", "all failed"); $("t_status").innerText = "failed"; $("t_btnStart").disabled = false; return; }
+    log("tangdou", "converting " + t_total + " videos...");
+    $("t_status").innerText = "0 / " + t_total;
+    var tmp = fso.GetSpecialFolder(2).Path;
+    t_progress = tmp + "\\tangdou_mp3_progress.log";
+    t_batch = tmp + "\\tangdou_mp3_convert.bat";
+    try { if (fso.FileExists(t_progress)) fso.DeleteFile(t_progress); } catch(e){}
+    try { if (fso.FileExists(t_batch)) fso.DeleteFile(t_batch); } catch(e){}
+    writeAnsi(t_batch, t_buildBatch(bitrate, afilter));
+    wsh.Run("\"" + t_batch + "\"", 7, false);
+    t_timer = window.setInterval(t_poll, 600);
+}
+
+function t_poll() {
+    var txt = readAllSafe(t_progress); if (txt == null) return;
+    var lines = txt.split(/\r?\n/);
+    var ok = 0, fail = 0, done = false, results = [];
+    for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        if (ln.indexOf("[OK]") == 0) { ok++; results.push(true); }
+        else if (ln.indexOf("[FAIL]") == 0) { fail++; results.push(false); }
+        else if (ln.indexOf("[DONE]") == 0) done = true;
+    }
+    var finished = ok + fail;
+    for (var k = t_reported; k < results.length && k < t_tasks.length; k++) {
+        log("tangdou", (results[k] ? "[OK]  " : "[FAIL]") + " " + t_tasks[k].title + ".mp3");
+    }
+    t_reported = results.length;
+    var pct = t_total > 0 ? Math.floor(finished * 100 / t_total) : 0;
+    $("t_bar").style.width = pct + "%"; $("t_status").innerText = finished + " / " + t_total;
+    if (done) {
+        window.clearInterval(t_timer); t_timer = null;
+        $("t_bar").style.width = "100%";
+        log("tangdou", "---- done: ok=" + ok + " fail=" + fail + " ----");
+        $("t_btnStart").disabled = false;
+        if ($("t_openAfter").checked) openFolder(t_outDir);
+        alert("Done! ok=" + ok + " fail=" + fail + "\nSaved to: " + t_outDir);
+    }
+}
+</script>
+</head>
+
+<body onload="init()">
+    <div id="hdr">
+        <span id="note">&#9835;</span><span id="hdrtxt"><span id="title">Video to MP3</span><br /><span id="subtitle">local MP4 or Tangdou link, convert to MP3</span></span>
+    </div>
+
+    <div id="tabBar">
+        <span id="tabMp4" class="tab active" onclick="switchTab('mp4')">Local MP4 to MP3</span>
+        <span id="tabTangdou" class="tab" onclick="switchTab('tangdou')">Tangdou Link to MP3</span>
+    </div>
+
+    <div class="wrap">
+    <div id="banner" class="banner">
+        <b>! ffmpeg.exe missing</b><br />
+        Please put 32-bit static ffmpeg.exe into the <b>bin</b> folder next to this program.
+    </div>
+
+    <!-- ========== Panel: MP4 ========== -->
+    <div id="panelMp4">
+        <div class="row">
+            <button id="m_btnPick" class="btn" onclick="m_pickFolder()">Select Folder</button>
+            <span id="m_path" class="path">(none)</span>
+        </div>
+        <div class="row"><span id="m_found" class="found">0 MP4 files</span></div>
+        <div class="row">
+            <span class="lbl">Quality:</span>
+            <select id="m_bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select>
+            &nbsp;&nbsp;<input type="checkbox" id="m_recursive" onclick="m_rescan()" /><label for="m_recursive">Include subfolders</label>
+        </div>
+        <div class="row">
+            <input type="checkbox" id="m_useOutDir" onclick="m_toggleOutDir()" /><label for="m_useOutDir">Custom output dir</label>
+            <button id="m_btnOutDir" class="btn" onclick="m_pickOutDir()" disabled>Select</button>
+            <span id="m_outPath" class="path">(same as source)</span>
+        </div>
+        <div class="row"><button id="m_btnAdv" class="btn btn-adv" onclick="m_toggleAdv()">hide advanced</button></div>
+        <div id="m_advBox" class="advBox">
+            <div class="advtitle">Advanced Options</div>
+            <div class="advrow">Skip first <input type="text" id="m_skipStart" class="num" value="0" onkeypress="onlyDigits()" />s &nbsp; Skip last <input type="text" id="m_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />s <span class="unit">(0 = no skip)</span></div>
+            <div class="advrow"><input type="checkbox" id="m_repeat2" /><label for="m_repeat2">Repeat 2x after trim</label></div>
+            <div class="advrow"><input type="checkbox" id="m_deleteSrc" onclick="m_onDeleteSrcToggle()" /><label for="m_deleteSrc">Move source MP4 to Recycle Bin after success</label></div>
+        </div>
+        <div class="row">
+            <button id="m_btnStart" class="btn btn-primary" onclick="m_startConvert()" disabled>Convert</button>
+            &nbsp;&nbsp;<input type="checkbox" id="m_openAfter" checked /><label for="m_openAfter">Open folder when done</label>
+        </div>
+        <div class="row"><div class="barwrap"><div id="m_bar" class="bar"></div></div><div id="m_status" class="status">waiting</div></div>
+        <div class="row"><textarea id="mp4_log" class="logbox" readonly></textarea></div>
+    </div>
+
+    <!-- ========== Panel: Tangdou ========== -->
+    <div id="panelTangdou" style="display:none">
+        <div class="row">
+            <span class="lbl">Paste Tangdou links (one per line, or vid number):</span>
+            <div class="hint">e.g. https://www.tangdouddn.com/h5/play?vid=20000011230835</div>
+            <textarea id="urlInput" placeholder="paste links here..."></textarea>
+        </div>
+        <div class="row">
+            <span class="lbl">Quality:</span>
+            <select id="t_bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select>
+            &nbsp;&nbsp;<input type="checkbox" id="t_lowQuality" checked /><label for="t_lowQuality">Lowest quality (save bandwidth)</label>
+        </div>
+        <div class="row">
+            <span class="lbl">Output:</span>
+            <button id="t_btnOutDir" class="btn" onclick="t_pickOutDir()">Select</button>
+            <span id="t_outPath" class="path"></span>
+        </div>
+        <div class="row"><button id="t_btnAdv" class="btn btn-adv" onclick="t_toggleAdv()">hide advanced</button></div>
+        <div id="t_advBox" class="advBox">
+            <div class="advtitle">Advanced Options</div>
+            <div class="advrow">Skip first <input type="text" id="t_skipStart" class="num" value="5" onkeypress="onlyDigits()" />s &nbsp; Skip last <input type="text" id="t_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />s <span class="unit">(default skip 5s ads)</span></div>
+            <div class="advrow"><input type="checkbox" id="t_repeat2" /><label for="t_repeat2">Repeat 2x after trim</label></div>
+        </div>
+        <div class="row">
+            <button id="t_btnStart" class="btn btn-primary" onclick="t_startConvert()">Convert</button>
+            &nbsp;&nbsp;<input type="checkbox" id="t_openAfter" checked /><label for="t_openAfter">Open folder when done</label>
+        </div>
+        <div class="row"><div class="barwrap"><div id="t_bar" class="bar"></div></div><div id="t_status" class="status">waiting</div></div>
+        <div class="row"><textarea id="tangdou_log" class="logbox" readonly></textarea></div>
+    </div>
+
+    <!-- ========== Shared footer ========== -->
+    <div class="row">
+        <input type="checkbox" id="debugLog" onclick="onDebugToggle()" />
+        <label for="debugLog">Debug log (debug.log, off by default)</label>
+    </div>
+    </div>
+</body>
+</html>
