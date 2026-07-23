@@ -316,6 +316,9 @@ function m_startConvert() {
     var repeat2 = $("m_repeat2").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
     if ($("m_useOutDir").checked && m_outDir == "") { alert("请先选择 MP3 输出目录。"); return; }
+    var tmp = fso.GetSpecialFolder(2).Path;
+    m_progress = tmp + "\\mp4_mp3_progress.log";
+    m_batch = tmp + "\\mp4_mp3_convert.bat";
     try { if (fso.FileExists(m_progress)) fso.DeleteFile(m_progress); } catch(e){}
     try { if (fso.FileExists(m_batch)) fso.DeleteFile(m_batch); } catch(e){}
     var batchContent = m_buildBatch(bitrate, afilter);
