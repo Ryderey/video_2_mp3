@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<title>视频转 MP3 工具</title>
+<title>视频转 MP3</title>
 <HTA:APPLICATION
     ID="oApp"
     APPLICATIONNAME="VideoToMP3"
@@ -114,7 +114,7 @@ function dbg(msg) {
             if (nl >= 0) cut = nl + 2;
             var tail = text.substring(cut);
             var tw = fso.CreateTextFile(g_debugLog, true, false);
-            tw.WriteLine("[" + new Date().toLocaleString() + "] [truncated]");
+            tw.WriteLine("[" + new Date().toLocaleString() + "] [日志超过 2MB，已截断旧内容，仅保留最新记录]");
             tw.Write(tail); tw.Close();
         }
         var ts = fso.OpenTextFile(g_debugLog, 8, true, false);
@@ -125,9 +125,9 @@ function dbg(msg) {
 
 function onDebugToggle() {
     if ($("debugLog").checked) {
-        dbg("===== debug enabled =====");
-        dbg("appDir: " + g_appDir);
-        dbg("ffmpeg: " + g_ffmpeg + " exists=" + fso.FileExists(g_ffmpeg));
+        dbg("===== 调试日志已启用 =====");
+        dbg("程序目录: " + g_appDir);
+        dbg("ffmpeg 路径: " + g_ffmpeg + "  存在=" + fso.FileExists(g_ffmpeg));
     }
 }
 
@@ -189,13 +189,13 @@ function init() {
     g_debugLog = g_appDir + "\\debug.log";
     g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
 
-    log("mp4", "program dir: " + g_appDir);
+    log("mp4", "程序目录: " + g_appDir);
     if (fso.FileExists(g_ffmpeg)) {
-        log("mp4", "ffmpeg OK: bin\\ffmpeg.exe");
-        log("tangdou", "ffmpeg OK: bin\\ffmpeg.exe");
+        log("mp4", "已找到 ffmpeg: bin\\ffmpeg.exe");
+        log("tangdou", "已找到 ffmpeg: bin\\ffmpeg.exe");
     } else {
-        log("mp4", "[ERROR] bin\\ffmpeg.exe not found");
-        log("tangdou", "[ERROR] bin\\ffmpeg.exe not found");
+        log("mp4", "[错误] 未找到 bin\\ffmpeg.exe");
+        log("tangdou", "[错误] 未找到 bin\\ffmpeg.exe");
         $("banner").style.display = "block";
         $("m_btnStart").disabled = true;
         $("m_btnPick").disabled = true;
@@ -215,10 +215,10 @@ var m_outDir = "";
 
 function m_pickFolder() {
     var shell = new ActiveXObject("Shell.Application");
-    var folder = shell.BrowseForFolder(0, "select MP4 folder", 0);
+    var folder = shell.BrowseForFolder(0, "选择包含 MP4 文件的文件夹", 0);
     if (folder == null) return;
     var self = folder.Self;
-    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    if (self == null || self.Path == "") { alert("无法读取该文件夹路径，请选择普通磁盘文件夹。"); return; }
     m_folder = self.Path;
     $("m_path").innerText = m_folder;
     m_rescan();
@@ -230,9 +230,9 @@ function m_rescan() {
     var recursive = $("m_recursive").checked;
     m_scanFolder(m_folder, recursive, m_files);
     m_total = m_files.length;
-    $("m_found").innerText = "found " + m_total + " MP4";
+    $("m_found").innerText = "发现 " + m_total + " 个 MP4 文件";
     $("m_btnStart").disabled = (m_total == 0);
-    if (m_total == 0) log("mp4", "no MP4 found.");
+    if (m_total == 0) log("mp4", "该文件夹未发现 MP4 文件。");
 }
 
 function m_scanFolder(path, recursive, arr) {
@@ -245,16 +245,16 @@ function m_scanFolder(path, recursive, arr) {
 function m_toggleOutDir() {
     var on = $("m_useOutDir").checked;
     $("m_btnOutDir").disabled = !on;
-    if (!on) { m_outDir = ""; $("m_outPath").innerText = "(same as source)"; }
+    if (!on) { m_outDir = ""; $("m_outPath").innerText = "（与源文件同目录）"; }
     else if (m_outDir == "") m_pickOutDir();
 }
 
 function m_pickOutDir() {
     var shell = new ActiveXObject("Shell.Application");
-    var folder = shell.BrowseForFolder(0, "select output dir", 0);
+    var folder = shell.BrowseForFolder(0, "选择 MP3 输出目录", 0);
     if (folder == null) { if (m_outDir == "") { $("m_useOutDir").checked = false; m_toggleOutDir(); } return; }
     var self = folder.Self;
-    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    if (self == null || self.Path == "") { alert("无法读取该文件夹路径。"); return; }
     m_outDir = self.Path;
     $("m_outPath").innerText = m_outDir;
 }
@@ -263,13 +263,13 @@ function m_toggleAdv() {
     var box = $("m_advBox");
     var open = (box.style.display != "none");
     box.style.display = open ? "none" : "block";
-    $("m_btnAdv").innerText = open ? "show advanced" : "hide advanced";
+    $("m_btnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
     fitLog("mp4");
 }
 
 function m_onDeleteSrcToggle() {
     var cb = $("m_deleteSrc");
-    if (cb.checked) { var yes = confirm("MP4 files will be moved to Recycle Bin after conversion.\nContinue?"); if (!yes) cb.checked = false; }
+    if (cb.checked) { var yes = confirm("【提示】勾选后，转换成功的 MP4 源文件将被移入回收站（可从回收站还原）。\n\n确定要勾选吗？"); if (!yes) cb.checked = false; }
 }
 
 function m_computeOutPath(file, used) {
@@ -308,22 +308,25 @@ function m_buildBatch(bitrate, afilter) {
 }
 
 function m_startConvert() {
-    if (m_total == 0) { alert("please select a folder first"); return; }
-    if (!fso.FileExists(g_ffmpeg)) { alert("ffmpeg not found"); return; }
+    if (m_total == 0) { alert("请先选择包含 MP4 的文件夹。"); return; }
+    if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
     var bitrate = $("m_bitrate").value;
     var skipStart = parseInt($("m_skipStart").value, 10); if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
     var skipEnd = parseInt($("m_skipEnd").value, 10); if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
     var repeat2 = $("m_repeat2").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
-    if ($("m_useOutDir").checked && m_outDir == "") { alert("please select output dir"); return; }
+    if ($("m_useOutDir").checked && m_outDir == "") { alert("请先选择 MP3 输出目录。"); return; }
     try { if (fso.FileExists(m_progress)) fso.DeleteFile(m_progress); } catch(e){}
     try { if (fso.FileExists(m_batch)) fso.DeleteFile(m_batch); } catch(e){}
     var batchContent = m_buildBatch(bitrate, afilter);
     writeAnsi(m_batch, batchContent);
     $("m_btnStart").disabled = true; $("m_btnPick").disabled = true;
-    $("m_bar").style.width = "0%"; $("m_status").innerText = "0 / " + m_total;
+    $("m_bar").style.width = "0%"; $("m_status").innerText = "0 / " + m_total + " 已完成";
     m_reported = 0;
-    log("mp4", "---- start " + m_total + " files, " + bitrate + "kbps ----");
+    log("mp4", "---- 开始转换，共 " + m_total + " 个文件，音质 " + bitrate + "kbps ----");
+    if (skipStart > 0) log("mp4", "跳过前面 " + skipStart + " 秒");
+    if (skipEnd > 0) log("mp4", "跳过后面 " + skipEnd + " 秒");
+    if (repeat2) log("mp4", "剪切后重复拼接成 2 遍");
     wsh.Run("\"" + m_batch + "\"", 7, false);
     m_timer = window.setInterval(m_poll, 500);
 }
@@ -344,21 +347,21 @@ function m_poll() {
     }
     m_reported = results.length;
     var pct = m_total > 0 ? Math.floor(finished * 100 / m_total) : 0;
-    $("m_bar").style.width = pct + "%"; $("m_status").innerText = finished + " / " + m_total;
+    $("m_bar").style.width = pct + "%"; $("m_status").innerText = finished + " / " + m_total + " 已完成";
     if (done) {
         window.clearInterval(m_timer); m_timer = null;
         $("m_bar").style.width = "100%";
-        log("mp4", "---- done: ok=" + ok + " fail=" + fail + " ----");
+        log("mp4", "---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
         $("m_btnStart").disabled = (m_total == 0); $("m_btnPick").disabled = false;
         if ($("m_deleteSrc").checked) {
             var deleted = 0;
             try { var shellApp = new ActiveXObject("Shell.Application"); var rb = shellApp.Namespace(10);
                 if (rb) { for (var dk = 0; dk < results.length && dk < m_files.length; dk++) { if (results[dk]) { try { rb.MoveHere(m_files[dk].Path, 0x14); deleted++; } catch(e){} } } }
             } catch(e){}
-            if (deleted > 0) log("mp4", deleted + " files moved to Recycle Bin");
+            if (deleted > 0) log("mp4", "已将 " + deleted + " 个成功转换的源 MP4 文件移入回收站");
         }
         if ($("m_openAfter").checked) openFolder(m_outDir != "" ? m_outDir : m_folder);
-        alert("Done! ok=" + ok + " fail=" + fail);
+        alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。");
     }
 }
 
@@ -402,10 +405,10 @@ function t_downgradeUrl(url) { return /_[HV]\d+P/i.test(url) ? url.replace(/_[HV
 
 function t_pickOutDir() {
     var shell = new ActiveXObject("Shell.Application");
-    var folder = shell.BrowseForFolder(0, "select output dir", 0);
+    var folder = shell.BrowseForFolder(0, "选择 MP3 输出目录", 0);
     if (folder == null) return;
     var self = folder.Self;
-    if (self == null || self.Path == "") { alert("invalid path"); return; }
+    if (self == null || self.Path == "") { alert("无法读取该文件夹路径。"); return; }
     t_outDir = self.Path; $("t_outPath").innerText = t_outDir;
 }
 
@@ -413,7 +416,7 @@ function t_toggleAdv() {
     var box = $("t_advBox");
     var open = (box.style.display != "none");
     box.style.display = open ? "none" : "block";
-    $("t_btnAdv").innerText = open ? "show advanced" : "hide advanced";
+    $("t_btnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
     fitLog("tangdou");
 }
 
@@ -438,7 +441,7 @@ function t_buildBatch(bitrate, afilter) {
 }
 
 function t_startConvert() {
-    if (!fso.FileExists(g_ffmpeg)) { alert("ffmpeg not found"); return; }
+    if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
     var text = $("urlInput").value;
     var lines = text.split(/\r?\n/);
     var vids = [];
@@ -447,22 +450,25 @@ function t_startConvert() {
         if (line == "") continue;
         var vid = t_parseVid(line);
         if (vid) vids.push(vid);
-        else log("tangdou", "[skip] " + line);
+        else log("tangdou", "[跳过] 无法识别的链接: " + line);
     }
-    if (vids.length == 0) { alert("no valid vid found"); return; }
-    if (!fso.FolderExists(t_outDir)) { try { fso.CreateFolder(t_outDir); } catch(e) { alert("cannot create dir"); return; } }
+    if (vids.length == 0) { alert("未找到有效的糖豆视频链接或vid编号。\n请粘贴包含 vid 参数的链接，或直接输入vid数字编号。"); return; }
+    if (!fso.FolderExists(t_outDir)) { try { fso.CreateFolder(t_outDir); } catch(e) { alert("无法创建输出目录。"); return; } }
     var bitrate = $("t_bitrate").value;
     var skipStart = parseInt($("t_skipStart").value, 10); if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
     var skipEnd = parseInt($("t_skipEnd").value, 10); if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
     var repeat2 = $("t_repeat2").checked;
     var useLowQ = $("t_lowQuality").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
-    $("t_btnStart").disabled = true; $("t_bar").style.width = "0%"; $("t_status").innerText = "parsing...";
+    $("t_btnStart").disabled = true; $("t_bar").style.width = "0%"; $("t_status").innerText = "正在解析链接...";
     t_tasks = []; t_reported = 0;
-    log("tangdou", "---- " + vids.length + " links ----");
+    log("tangdou", "---- 开始处理，共 " + vids.length + " 个链接 ----");
+    if (skipStart > 0) log("tangdou", "跳过前面 " + skipStart + " 秒");
+    if (skipEnd > 0) log("tangdou", "跳过后面 " + skipEnd + " 秒");
+    if (repeat2) log("tangdou", "剪切后重复拼接成 2 遍");
     var usedNames = {};
     for (var j = 0; j < vids.length; j++) {
-        $("t_status").innerText = "parsing " + (j+1) + "/" + vids.length;
+        $("t_status").innerText = "正在解析 " + (j+1) + " / " + vids.length + " ...";
         var info = t_getVideoInfo(vids[j]);
         if (info.error) { log("tangdou", "  [FAIL] " + info.error); continue; }
         var videoUrl = useLowQ ? t_downgradeUrl(info.url) : info.url;
@@ -474,9 +480,9 @@ function t_startConvert() {
         log("tangdou", "  [OK] " + info.title);
     }
     t_total = t_tasks.length;
-    if (t_total == 0) { log("tangdou", "all failed"); $("t_status").innerText = "failed"; $("t_btnStart").disabled = false; return; }
-    log("tangdou", "converting " + t_total + " videos...");
-    $("t_status").innerText = "0 / " + t_total;
+    if (t_total == 0) { log("tangdou", "---- 所有链接解析失败，无法继续 ----"); $("t_status").innerText = "解析失败"; $("t_btnStart").disabled = false; return; }
+    log("tangdou", "成功解析 " + t_total + " 个视频，开始下载转换...");
+    $("t_status").innerText = "0 / " + t_total + " 已完成";
     var tmp = fso.GetSpecialFolder(2).Path;
     t_progress = tmp + "\\tangdou_mp3_progress.log";
     t_batch = tmp + "\\tangdou_mp3_convert.bat";
@@ -503,14 +509,14 @@ function t_poll() {
     }
     t_reported = results.length;
     var pct = t_total > 0 ? Math.floor(finished * 100 / t_total) : 0;
-    $("t_bar").style.width = pct + "%"; $("t_status").innerText = finished + " / " + t_total;
+    $("t_bar").style.width = pct + "%"; $("t_status").innerText = finished + " / " + t_total + " 已完成";
     if (done) {
         window.clearInterval(t_timer); t_timer = null;
         $("t_bar").style.width = "100%";
-        log("tangdou", "---- done: ok=" + ok + " fail=" + fail + " ----");
+        log("tangdou", "---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
         $("t_btnStart").disabled = false;
         if ($("t_openAfter").checked) openFolder(t_outDir);
-        alert("Done! ok=" + ok + " fail=" + fail + "\nSaved to: " + t_outDir);
+        alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。\n\nMP3 保存在: " + t_outDir);
     }
 }
 </script>
@@ -518,87 +524,87 @@ function t_poll() {
 
 <body onload="init()">
     <div id="hdr">
-        <span id="note">&#9835;</span><span id="hdrtxt"><span id="title">Video to MP3</span><br /><span id="subtitle">local MP4 or Tangdou link, convert to MP3</span></span>
+        <span id="note">&#9835;</span><span id="hdrtxt"><span id="title">视频转 MP3</span><br /><span id="subtitle">本地 MP4 或糖豆链接，一键转成 MP3 音乐</span></span>
     </div>
 
     <div id="tabBar">
-        <span id="tabMp4" class="tab active" onclick="switchTab('mp4')">Local MP4 to MP3</span>
-        <span id="tabTangdou" class="tab" onclick="switchTab('tangdou')">Tangdou Link to MP3</span>
+        <span id="tabMp4" class="tab active" onclick="switchTab('mp4')">本地MP4转MP3</span>
+        <span id="tabTangdou" class="tab" onclick="switchTab('tangdou')">糖豆链接转MP3</span>
     </div>
 
     <div class="wrap">
     <div id="banner" class="banner">
-        <b>! ffmpeg.exe missing</b><br />
-        Please put 32-bit static ffmpeg.exe into the <b>bin</b> folder next to this program.
+        <b>⚠ 缺少 ffmpeg.exe</b><br />
+        请下载 <b>32 位</b>静态版 ffmpeg，将 ffmpeg.exe 放入本程序目录下的 <b>bin</b> 文件夹，然后重新打开本程序。
     </div>
 
     <!-- ========== Panel: MP4 ========== -->
     <div id="panelMp4">
         <div class="row">
-            <button id="m_btnPick" class="btn" onclick="m_pickFolder()">Select Folder</button>
-            <span id="m_path" class="path">(none)</span>
+            <button id="m_btnPick" class="btn" onclick="m_pickFolder()">选择文件夹</button>
+            <span id="m_path" class="path">（未选择）</span>
         </div>
-        <div class="row"><span id="m_found" class="found">0 MP4 files</span></div>
+        <div class="row"><span id="m_found" class="found">发现 0 个 MP4 文件</span></div>
         <div class="row">
-            <span class="lbl">Quality:</span>
+            <span class="lbl">音质：</span>
             <select id="m_bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select>
-            &nbsp;&nbsp;<input type="checkbox" id="m_recursive" onclick="m_rescan()" /><label for="m_recursive">Include subfolders</label>
+            &nbsp;&nbsp;<input type="checkbox" id="m_recursive" onclick="m_rescan()" /><label for="m_recursive">包含子文件夹</label>
         </div>
         <div class="row">
-            <input type="checkbox" id="m_useOutDir" onclick="m_toggleOutDir()" /><label for="m_useOutDir">Custom output dir</label>
-            <button id="m_btnOutDir" class="btn" onclick="m_pickOutDir()" disabled>Select</button>
-            <span id="m_outPath" class="path">(same as source)</span>
+            <input type="checkbox" id="m_useOutDir" onclick="m_toggleOutDir()" /><label for="m_useOutDir">输出到指定目录</label>
+            <button id="m_btnOutDir" class="btn" onclick="m_pickOutDir()" disabled>选择目录</button>
+            <span id="m_outPath" class="path">（与源文件同目录）</span>
         </div>
-        <div class="row"><button id="m_btnAdv" class="btn btn-adv" onclick="m_toggleAdv()">hide advanced</button></div>
+        <div class="row"><button id="m_btnAdv" class="btn btn-adv" onclick="m_toggleAdv()">收起高级选项</button></div>
         <div id="m_advBox" class="advBox">
-            <div class="advtitle">Advanced Options</div>
-            <div class="advrow">Skip first <input type="text" id="m_skipStart" class="num" value="0" onkeypress="onlyDigits()" />s &nbsp; Skip last <input type="text" id="m_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />s <span class="unit">(0 = no skip)</span></div>
-            <div class="advrow"><input type="checkbox" id="m_repeat2" /><label for="m_repeat2">Repeat 2x after trim</label></div>
-            <div class="advrow"><input type="checkbox" id="m_deleteSrc" onclick="m_onDeleteSrcToggle()" /><label for="m_deleteSrc">Move source MP4 to Recycle Bin after success</label></div>
+            <div class="advtitle">高级选项（默认无需修改）</div>
+            <div class="advrow">跳过前面<input type="text" id="m_skipStart" class="num" value="0" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="m_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒 <span class="unit">（填 0 表示不跳过，只支持整数秒）</span></div>
+            <div class="advrow"><input type="checkbox" id="m_repeat2" /><label for="m_repeat2">剪切后再重复拼接成 2 遍</label></div>
+            <div class="advrow"><input type="checkbox" id="m_deleteSrc" onclick="m_onDeleteSrcToggle()" /><label for="m_deleteSrc">转换成功后将原 MP4 文件移入回收站（可在回收站还原）</label></div>
         </div>
         <div class="row">
-            <button id="m_btnStart" class="btn btn-primary" onclick="m_startConvert()" disabled>Convert</button>
-            &nbsp;&nbsp;<input type="checkbox" id="m_openAfter" checked /><label for="m_openAfter">Open folder when done</label>
+            <button id="m_btnStart" class="btn btn-primary" onclick="m_startConvert()" disabled>开始转换</button>
+            &nbsp;&nbsp;<input type="checkbox" id="m_openAfter" checked /><label for="m_openAfter">完成后打开文件夹</label>
         </div>
-        <div class="row"><div class="barwrap"><div id="m_bar" class="bar"></div></div><div id="m_status" class="status">waiting</div></div>
+        <div class="row"><div class="barwrap"><div id="m_bar" class="bar"></div></div><div id="m_status" class="status">等待开始</div></div>
         <div class="row"><textarea id="mp4_log" class="logbox" readonly></textarea></div>
     </div>
 
     <!-- ========== Panel: Tangdou ========== -->
     <div id="panelTangdou" style="display:none">
         <div class="row">
-            <span class="lbl">Paste Tangdou links (one per line, or vid number):</span>
-            <div class="hint">e.g. https://www.tangdouddn.com/h5/play?vid=20000011230835</div>
-            <textarea id="urlInput" placeholder="paste links here..."></textarea>
+            <span class="lbl">粘贴糖豆视频链接（每行一个，也可直接输入vid编号）：</span>
+            <div class="hint">例如：https://www.tangdouddn.com/h5/play?vid=20000011230835 或 直接输入 20000011230835</div>
+            <textarea id="urlInput" placeholder="在此粘贴糖豆视频分享链接，每行一个..."></textarea>
         </div>
         <div class="row">
-            <span class="lbl">Quality:</span>
+            <span class="lbl">音质：</span>
             <select id="t_bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select>
-            &nbsp;&nbsp;<input type="checkbox" id="t_lowQuality" checked /><label for="t_lowQuality">Lowest quality (save bandwidth)</label>
+            &nbsp;&nbsp;<input type="checkbox" id="t_lowQuality" checked /><label for="t_lowQuality">使用最低画质（省流量，只要声音不影响）</label>
         </div>
         <div class="row">
-            <span class="lbl">Output:</span>
-            <button id="t_btnOutDir" class="btn" onclick="t_pickOutDir()">Select</button>
+            <span class="lbl">输出目录：</span>
+            <button id="t_btnOutDir" class="btn" onclick="t_pickOutDir()">选择目录</button>
             <span id="t_outPath" class="path"></span>
         </div>
-        <div class="row"><button id="t_btnAdv" class="btn btn-adv" onclick="t_toggleAdv()">hide advanced</button></div>
+        <div class="row"><button id="t_btnAdv" class="btn btn-adv" onclick="t_toggleAdv()">收起高级选项</button></div>
         <div id="t_advBox" class="advBox">
-            <div class="advtitle">Advanced Options</div>
-            <div class="advrow">Skip first <input type="text" id="t_skipStart" class="num" value="5" onkeypress="onlyDigits()" />s &nbsp; Skip last <input type="text" id="t_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />s <span class="unit">(default skip 5s ads)</span></div>
-            <div class="advrow"><input type="checkbox" id="t_repeat2" /><label for="t_repeat2">Repeat 2x after trim</label></div>
+            <div class="advtitle">高级选项（默认无需修改）</div>
+            <div class="advrow">跳过前面<input type="text" id="t_skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="t_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒 <span class="unit">（默认跳过前5秒广告，填 0 表示不跳过）</span></div>
+            <div class="advrow"><input type="checkbox" id="t_repeat2" /><label for="t_repeat2">剪切后再重复拼接成 2 遍</label></div>
         </div>
         <div class="row">
-            <button id="t_btnStart" class="btn btn-primary" onclick="t_startConvert()">Convert</button>
-            &nbsp;&nbsp;<input type="checkbox" id="t_openAfter" checked /><label for="t_openAfter">Open folder when done</label>
+            <button id="t_btnStart" class="btn btn-primary" onclick="t_startConvert()">开始转换</button>
+            &nbsp;&nbsp;<input type="checkbox" id="t_openAfter" checked /><label for="t_openAfter">完成后打开文件夹</label>
         </div>
-        <div class="row"><div class="barwrap"><div id="t_bar" class="bar"></div></div><div id="t_status" class="status">waiting</div></div>
+        <div class="row"><div class="barwrap"><div id="t_bar" class="bar"></div></div><div id="t_status" class="status">等待开始</div></div>
         <div class="row"><textarea id="tangdou_log" class="logbox" readonly></textarea></div>
     </div>
 
     <!-- ========== Shared footer ========== -->
     <div class="row">
         <input type="checkbox" id="debugLog" onclick="onDebugToggle()" />
-        <label for="debugLog">Debug log (debug.log, off by default)</label>
+        <label for="debugLog">记录调试日志（保存到程序目录 debug.log，排错用，默认关闭）</label>
     </div>
     </div>
 </body>
