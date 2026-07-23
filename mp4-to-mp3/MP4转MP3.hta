@@ -19,6 +19,7 @@
     body {
         font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
         font-size: 17px;
+        font-weight: bold;
         line-height: 1.5;
         background: #eef2f5;
         color: #1c2733;
@@ -341,6 +342,12 @@ function buildAudioFilter(skipStart, skipEnd, repeat2) {
 }
 
 // 展开/收起高级选项面板
+function resetAdv() {
+    $("skipStart").value = "0";
+    $("skipEnd").value = "0";
+    $("repeat2").checked = false;
+}
+
 function toggleAdv() {
     var box = $("advBox");
     var open = (box.style.display != "none");
@@ -683,14 +690,16 @@ function poll() {
     <div id="advBox">
         <div class="advtitle">高级选项（默认无需修改）</div>
         <div class="advrow">
-            跳过前面<input type="text" id="skipStart" class="num" value="0" onkeypress="onlyDigits()" />秒
+            跳过前面<input type="text" id="skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
             &nbsp;&nbsp;&nbsp;&nbsp;
-            跳过后面<input type="text" id="skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒
+            跳过后面<input type="text" id="skipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒
             <span class="unit">（填 0 表示不跳过，只支持整数秒）</span>
         </div>
         <div class="advrow">
-            <input type="checkbox" id="repeat2" />
+            <input type="checkbox" id="repeat2" checked />
             <label for="repeat2">剪切后再重复拼接成 2 遍</label>
+            &nbsp;&nbsp;
+            <button class="btn btn-adv" onclick="resetAdv()">清零</button>
         </div>
         <div class="advrow">
             <input type="checkbox" id="deleteSrc" onclick="onDeleteSrcToggle()" />

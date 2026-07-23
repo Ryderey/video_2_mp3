@@ -19,6 +19,7 @@
     body {
         font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
         font-size: 17px;
+        font-weight: bold;
         line-height: 1.5;
         background: #eef2f5;
         color: #1c2733;
@@ -259,6 +260,12 @@ function m_pickOutDir() {
     $("m_outPath").innerText = m_outDir;
 }
 
+function m_resetAdv() {
+    $("m_skipStart").value = "0";
+    $("m_skipEnd").value = "0";
+    $("m_repeat2").checked = false;
+}
+
 function m_toggleAdv() {
     var box = $("m_advBox");
     var open = (box.style.display != "none");
@@ -415,6 +422,12 @@ function t_pickOutDir() {
     t_outDir = self.Path; $("t_outPath").innerText = t_outDir;
 }
 
+function t_resetAdv() {
+    $("t_skipStart").value = "0";
+    $("t_skipEnd").value = "0";
+    $("t_repeat2").checked = false;
+}
+
 function t_toggleAdv() {
     var box = $("t_advBox");
     var open = (box.style.display != "none");
@@ -561,8 +574,8 @@ function t_poll() {
         <div class="row"><button id="m_btnAdv" class="btn btn-adv" onclick="m_toggleAdv()">收起高级选项</button></div>
         <div id="m_advBox" class="advBox">
             <div class="advtitle">高级选项（默认无需修改）</div>
-            <div class="advrow">跳过前面<input type="text" id="m_skipStart" class="num" value="0" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="m_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒 <span class="unit">（填 0 表示不跳过，只支持整数秒）</span></div>
-            <div class="advrow"><input type="checkbox" id="m_repeat2" /><label for="m_repeat2">剪切后再重复拼接成 2 遍</label></div>
+            <div class="advrow">跳过前面<input type="text" id="m_skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="m_skipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒 <span class="unit">（填 0 表示不跳过，只支持整数秒）</span></div>
+            <div class="advrow"><input type="checkbox" id="m_repeat2" checked /><label for="m_repeat2">剪切后再重复拼接成 2 遍</label> &nbsp;&nbsp; <button class="btn btn-adv" onclick="m_resetAdv()">清零</button></div>
             <div class="advrow"><input type="checkbox" id="m_deleteSrc" onclick="m_onDeleteSrcToggle()" /><label for="m_deleteSrc">转换成功后将原 MP4 文件移入回收站（可在回收站还原）</label></div>
         </div>
         <div class="row">
@@ -593,8 +606,8 @@ function t_poll() {
         <div class="row"><button id="t_btnAdv" class="btn btn-adv" onclick="t_toggleAdv()">收起高级选项</button></div>
         <div id="t_advBox" class="advBox">
             <div class="advtitle">高级选项（默认无需修改）</div>
-            <div class="advrow">跳过前面<input type="text" id="t_skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="t_skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒 <span class="unit">（默认跳过前5秒广告，填 0 表示不跳过）</span></div>
-            <div class="advrow"><input type="checkbox" id="t_repeat2" /><label for="t_repeat2">剪切后再重复拼接成 2 遍</label></div>
+            <div class="advrow">跳过前面<input type="text" id="t_skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒 &nbsp;&nbsp;&nbsp;&nbsp; 跳过后面<input type="text" id="t_skipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒 <span class="unit">（默认跳过前5秒广告，填 0 表示不跳过）</span></div>
+            <div class="advrow"><input type="checkbox" id="t_repeat2" checked /><label for="t_repeat2">剪切后再重复拼接成 2 遍</label> &nbsp;&nbsp; <button class="btn btn-adv" onclick="t_resetAdv()">清零</button></div>
         </div>
         <div class="row">
             <button id="t_btnStart" class="btn btn-primary" onclick="t_startConvert()">开始转换</button>
