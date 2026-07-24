@@ -438,6 +438,23 @@ function t_toggleAdv() {
     fitLog("tangdou");
 }
 
+function t_buildVbs(videoUrl, savePath) {
+    var nl = "\r\n";
+    var s = "";
+    s += "Set xhr = CreateObject(\"WinHttp.WinHttpRequest.5.1\")" + nl;
+    s += "xhr.Open \"GET\", \"" + videoUrl + "\", False" + nl;
+    s += "xhr.SetRequestHeader \"Referer\", \"https://www.tangdoucdn.com/\"" + nl;
+    s += "xhr.Send" + nl;
+    s += "If xhr.Status <> 200 Then WScript.Quit 1" + nl;
+    s += "Set stream = CreateObject(\"ADODB.Stream\")" + nl;
+    s += "stream.Type = 1" + nl;
+    s += "stream.Open" + nl;
+    s += "stream.Write xhr.ResponseBody" + nl;
+    s += "stream.SaveToFile \"" + savePath + "\", 2" + nl;
+    s += "stream.Close" + nl;
+    return s;
+}
+
 function t_buildBatch(bitrate, afilter) {
     var nl = "\r\n", s = "@echo off" + nl;
     s += ">\"" + t_progress + "\" echo [START]" + nl;
@@ -446,11 +463,24 @@ function t_buildBatch(bitrate, afilter) {
         var t = t_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        s += "\"" + escPct(g_ffmpeg) + "\" -y -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\" -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" 2>\"" + t_progress.replace('.log','_err.log') + "\" >nul" + nl;
+        var tmpVideo = escPct(t_progress.replace('tangdou_mp3_progress.log','td_' + t.vid + '.mp4'));
+        var vbsPath = escPct(t_progress.replace('tangdou_mp3_progress.log','td_' + t.vid + '.vbs'));
+
+        // Step 1: cscript 运行 VBScript 下载（带 Referer 头）
+        s += "cscript //nologo \"" + vbsPath + "\"" + nl;
         s += "if errorlevel 1 goto tfail" + i + nl;
+        s += "del \"" + vbsPath + "\"" + nl;
+
+        // Step 2: ffmpeg 转换本地文件
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "if errorlevel 1 goto tfail" + i + nl;
+
+        // Step 3: 清理临时视频
+        s += "del \"" + tmpVideo + "\"" + nl;
         s += ">>\"" + t_progress + "\" echo [OK]" + nl;
         s += "goto tnext" + i + nl;
         s += ":tfail" + i + nl;
+        s += "if exist \"" + tmpVideo + "\" del \"" + tmpVideo + "\"" + nl;
         s += ">>\"" + t_progress + "\" echo [FAIL]" + nl;
         s += ":tnext" + i + nl;
     }
@@ -502,6 +532,15 @@ function t_startConvert() {
     log("tangdou", "成功解析 " + t_total + " 个视频，开始下载转换...");
     $("t_status").innerText = "0 / " + t_total + " 已完成";
     var tmp = fso.GetSpecialFolder(2).Path;
+
+    // 生成 VBScript 下载脚本（WinHttp 带 Referer，Win7 原生支持）
+    for (var k = 0; k < t_tasks.length; k++) {
+        var tk = t_tasks[k];
+        var vbsPath = tmp + "\\td_" + tk.vid + ".vbs";
+        var vbs = t_buildVbs(tk.url, tmp + "\\td_" + tk.vid + ".mp4");
+        writeAnsi(vbsPath, vbs);
+    }
+
     t_progress = tmp + "\\tangdou_mp3_progress.log";
     t_batch = tmp + "\\tangdou_mp3_convert.bat";
     try { if (fso.FileExists(t_progress)) fso.DeleteFile(t_progress); } catch(e){}

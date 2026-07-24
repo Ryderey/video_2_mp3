@@ -200,6 +200,7 @@ var wsh = new ActiveXObject("WScript.Shell");
 var g_appDir   = "";
 var g_ffmpeg   = "";
 var g_outDir   = "";
+var g_tmpDir   = "";
 var g_progress = "";
 var g_batch    = "";
 var g_timer    = null;
@@ -435,6 +436,7 @@ function init() {
     g_debugLog = g_appDir + "\\debug.log";
     g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
     var tmp = fso.GetSpecialFolder(2).Path;
+    g_tmpDir = tmp;
     g_progress = tmp + "\\tangdou_mp3_progress.log";
     g_batch    = tmp + "\\tangdou_mp3_convert.bat";
 
@@ -565,6 +567,17 @@ function startConvert() {
     log("成功解析 " + g_total + " 个视频，开始下载转换...");
     $("status").innerText = "0 / " + g_total + " 已完成";
 
+    // 生成 VBScript 下载脚本（WinHttp 带 Referer，Win7 原生支持）
+    var vbsFiles = [];
+    for (var k = 0; k < g_tasks.length; k++) {
+        var tk = g_tasks[k];
+        var vbsPath = g_tmpDir + "\\td_" + tk.vid + ".vbs";
+        var vbs = buildVbs(tk.url, g_tmpDir + "\\td_" + tk.vid + ".mp4");
+        writeAnsi(vbsPath, vbs);
+        vbsFiles.push(vbsPath);
+        dbg("VBScript: " + vbsPath);
+    }
+
     // 生成批处理
     var batchContent = buildBatch(bitrate, afilter);
     dbg("批处理内容 >>>\r\n" + batchContent + "<<<");
@@ -579,9 +592,28 @@ function startConvert() {
     g_timer = window.setInterval(poll, 600);
 }
 
+// ================= 生成 VBScript 下载脚本 =================
+// 使用 WinHttp.WinHttpRequest.5.1 + ADODB.Stream，Win7 原生支持
+// 由 HTA 直接写入 .vbs 文件，避免批处理 echo 转义问题
+function buildVbs(videoUrl, savePath) {
+    var nl = "\r\n";
+    var s = "";
+    s += "Set xhr = CreateObject(\"WinHttp.WinHttpRequest.5.1\")" + nl;
+    s += "xhr.Open \"GET\", \"" + videoUrl + "\", False" + nl;
+    s += "xhr.SetRequestHeader \"Referer\", \"https://www.tangdoucdn.com/\"" + nl;
+    s += "xhr.Send" + nl;
+    s += "If xhr.Status <> 200 Then WScript.Quit 1" + nl;
+    s += "Set stream = CreateObject(\"ADODB.Stream\")" + nl;
+    s += "stream.Type = 1" + nl;
+    s += "stream.Open" + nl;
+    s += "stream.Write xhr.ResponseBody" + nl;
+    s += "stream.SaveToFile \"" + savePath + "\", 2" + nl;
+    s += "stream.Close" + nl;
+    return s;
+}
+
 // ================= 生成批处理 =================
-// 使用 goto 跳转代替 if(...)else(...) 括号块，
-// 彻底避免 cmd.exe 对引号内 ) 字符的块解析陷阱
+// 两步方案：1) cscript 运行 VBScript 下载（带 Referer）2) ffmpeg 转本地文件
 function buildBatch(bitrate, afilter) {
     var nl = "\r\n";
     var s = "@echo off" + nl;
@@ -593,18 +625,26 @@ function buildBatch(bitrate, afilter) {
         var t = g_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        // 糖豆 CDN 强制要求 Referer，否则返回 302 假文件
-        var cmd = "\"" + escPct(g_ffmpeg) + "\" -y"
-            + " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\""
-            + " -i \"" + safeUrl + "\""
-            + " -vn" + afArg
-            + " -acodec libmp3lame -ab " + bitrate + "k"
-            + " \"" + outPath + "\" 2>\"" + g_progress.replace('.log','_err.log') + "\" >nul";
-        s += cmd + nl;
+        var tmpVideo = escPct(g_tmpDir + "\\td_" + t.vid + ".mp4");
+
+        var vbsPath = escPct(g_tmpDir + "\\td_" + t.vid + ".vbs");
+
+        // Step 1: cscript 运行 VBScript 下载（带 Referer 头）
+        s += "cscript //nologo \"" + vbsPath + "\"" + nl;
         s += "if errorlevel 1 goto fail" + i + nl;
+        s += "del \"" + vbsPath + "\"" + nl;
+
+        // Step 2: ffmpeg 转换本地文件
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "if errorlevel 1 goto fail" + i + nl;
+
+        // Step 3: 清理临时视频
+        s += "del \"" + tmpVideo + "\"" + nl;
         s += ">>\"" + g_progress + "\" echo [OK]" + nl;
         s += "goto next" + i + nl;
+
         s += ":fail" + i + nl;
+        s += "if exist \"" + tmpVideo + "\" del \"" + tmpVideo + "\"" + nl;
         s += ">>\"" + g_progress + "\" echo [FAIL]" + nl;
         s += ":next" + i + nl;
     }
