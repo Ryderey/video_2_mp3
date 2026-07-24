@@ -593,8 +593,9 @@ function buildBatch(bitrate, afilter) {
         var t = g_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        // ffmpeg 直接读取带签名的 HTTP 视频流（无需 Referer）
+        // 糖豆 CDN 强制要求 Referer，否则返回 302 假文件
         var cmd = "\"" + escPct(g_ffmpeg) + "\" -y"
+            + " -headers \"Referer: https://www.tangdoucdn.com/\""
             + " -i \"" + safeUrl + "\""
             + " -vn" + afArg
             + " -acodec libmp3lame -ab " + bitrate + "k"

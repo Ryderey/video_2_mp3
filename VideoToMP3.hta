@@ -446,7 +446,7 @@ function t_buildBatch(bitrate, afilter) {
         var t = t_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -headers \"Referer: https://www.tangdoucdn.com/\" -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto tfail" + i + nl;
         s += ">>\"" + t_progress + "\" echo [OK]" + nl;
         s += "goto tnext" + i + nl;
