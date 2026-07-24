@@ -595,11 +595,11 @@ function buildBatch(bitrate, afilter) {
         var safeUrl = escPct(t.url);
         // 糖豆 CDN 强制要求 Referer，否则返回 302 假文件
         var cmd = "\"" + escPct(g_ffmpeg) + "\" -y"
-            + " -headers \"Referer: https://www.tangdoucdn.com/\""
+            + " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\""
             + " -i \"" + safeUrl + "\""
             + " -vn" + afArg
             + " -acodec libmp3lame -ab " + bitrate + "k"
-            + " \"" + outPath + "\" >nul 2>&1";
+            + " \"" + outPath + "\" 2>\"" + g_progress.replace('.log','_err.log') + "\" >nul";
         s += cmd + nl;
         s += "if errorlevel 1 goto fail" + i + nl;
         s += ">>\"" + g_progress + "\" echo [OK]" + nl;
