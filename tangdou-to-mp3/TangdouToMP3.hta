@@ -531,6 +531,9 @@ function startConvert() {
         }
 
         var videoUrl = info.url;
+        // Win7 未打补丁时 WinHTTP 不支持 TLS1.2，HTTPS 下载会失败
+        // 七牛 CDN 支持 HTTP 访问（sign 参数已鉴权），转为 HTTP 确保兼容
+        videoUrl = videoUrl.replace(/^https:\/\//i, "http://");
         if (useLowQ) {
             videoUrl = downgradeUrl(videoUrl);
             dbg("降级URL: " + videoUrl);
@@ -567,17 +570,6 @@ function startConvert() {
     log("成功解析 " + g_total + " 个视频，开始下载转换...");
     $("status").innerText = "0 / " + g_total + " 已完成";
 
-    // 生成 VBScript 下载脚本（WinHttp 带 Referer，Win7 原生支持）
-    var vbsFiles = [];
-    for (var k = 0; k < g_tasks.length; k++) {
-        var tk = g_tasks[k];
-        var vbsPath = g_tmpDir + "\\td_" + tk.vid + ".vbs";
-        var vbs = buildVbs(tk.url, g_tmpDir + "\\td_" + tk.vid + ".mp4");
-        writeAnsi(vbsPath, vbs);
-        vbsFiles.push(vbsPath);
-        dbg("VBScript: " + vbsPath);
-    }
-
     // 生成批处理
     var batchContent = buildBatch(bitrate, afilter);
     dbg("批处理内容 >>>\r\n" + batchContent + "<<<");
@@ -592,49 +584,18 @@ function startConvert() {
     g_timer = window.setInterval(poll, 600);
 }
 
-// ================= 生成 VBScript 下载脚本 =================
-// 使用 WinHttp.WinHttpRequest.5.1 + ADODB.Stream，Win7 原生支持
-// 由 HTA 直接写入 .vbs 文件，避免批处理 echo 转义问题
-function buildVbs(videoUrl, savePath) {
-    var nl = "\r\n";
-    var s = "";
-    s += "On Error Resume Next" + nl;
-    s += "Set xhr = CreateObject(\"WinHttp.WinHttpRequest.5.1\")" + nl;
-    // Win7 默认不启用 TLS 1.2，必须手动设置 SecureProtocols
-    // 0xA00 = TLS1.2(2048) + TLS1.1(512)，0x2800 = 兼容更多服务器
-    s += "xhr.Option(9) = &HA80" + nl;
-    s += "xhr.Open \"GET\", \"" + videoUrl + "\", False" + nl;
-    s += "xhr.SetRequestHeader \"Referer\", \"https://www.tangdoucdn.com/\"" + nl;
-    s += "xhr.Send" + nl;
-    s += "If Err.Number <> 0 Then" + nl;
-    s += "  WScript.Echo \"[VBS] Send error: \" & Err.Description" + nl;
-    s += "  WScript.Quit 2" + nl;
-    s += "End If" + nl;
-    s += "If xhr.Status <> 200 Then" + nl;
-    s += "  WScript.Echo \"[VBS] HTTP \" & xhr.Status" + nl;
-    s += "  WScript.Quit 1" + nl;
-    s += "End If" + nl;
-    s += "Set stream = CreateObject(\"ADODB.Stream\")" + nl;
-    s += "stream.Type = 1" + nl;
-    s += "stream.Open" + nl;
-    s += "stream.Write xhr.ResponseBody" + nl;
-    s += "stream.SaveToFile \"" + savePath + "\", 2" + nl;
-    s += "stream.Close" + nl;
-    s += "If Err.Number <> 0 Then" + nl;
-    s += "  WScript.Echo \"[VBS] Save error: \" & Err.Description" + nl;
-    s += "  WScript.Quit 3" + nl;
-    s += "End If" + nl;
-    return s;
-}
-
 // ================= 生成批处理 =================
-// 两步方案：1) cscript 运行 VBScript 下载（带 Referer）2) ffmpeg 转本地文件
+// 纯 ffmpeg 方案：用 ffmpeg 直接下载（自带 HTTP 引擎，不依赖系统 WinHTTP/TLS）
+// -headers 设置 Referer 满足糖豆 CDN 鉴权要求，Win7 无需任何补丁
 function buildBatch(bitrate, afilter) {
     var nl = "\r\n";
     var s = "@echo off" + nl;
     s += ">\"" + g_progress + "\" echo [START]" + nl;
 
     var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+    var ff = "\"" + escPct(g_ffmpeg) + "\"";
+    // 糖豆 CDN 要求 Referer 头，否则返回 302 假文件
+    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\r\n\"";
 
     for (var i = 0; i < g_tasks.length; i++) {
         var t = g_tasks[i];
@@ -642,18 +603,14 @@ function buildBatch(bitrate, afilter) {
         var safeUrl = escPct(t.url);
         var tmpVideo = escPct(g_tmpDir + "\\td_" + t.vid + ".mp4");
 
-        var vbsPath = escPct(g_tmpDir + "\\td_" + t.vid + ".vbs");
-
-        // Step 1: cscript 运行 VBScript 下载（带 Referer 头）
-        var vbsLog = escPct(g_tmpDir + "\\td_" + t.vid + "_dl.log");
-        s += "cscript //nologo \"" + vbsPath + "\" >\"" + vbsLog + "\" 2>&1" + nl;
+        // Step 1: ffmpeg 下载视频到临时文件（自带 HTTP 客户端，无需 VBScript/WinHTTP）
+        s += ff + " -y" + hdr + " -i \"" + safeUrl + "\" -c copy \"" + tmpVideo + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto fail" + i + nl;
-        s += "del \"" + vbsPath + "\"" + nl;
         // 校验下载文件大小（<1MB 说明下载到了占位视频）
         s += "for %%F in (\"" + tmpVideo + "\") do if %%~zF LSS 1048576 goto fail" + i + nl;
 
-        // Step 2: ffmpeg 转换本地文件
-        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        // Step 2: ffmpeg 转换本地文件为 MP3
+        s += ff + " -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto fail" + i + nl;
 
         // Step 3: 清理临时视频

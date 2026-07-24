@@ -438,58 +438,26 @@ function t_toggleAdv() {
     fitLog("tangdou");
 }
 
-function t_buildVbs(videoUrl, savePath) {
-    var nl = "\r\n";
-    var s = "";
-    s += "On Error Resume Next" + nl;
-    s += "Set xhr = CreateObject(\"WinHttp.WinHttpRequest.5.1\")" + nl;
-    // Win7 默认不启用 TLS 1.2，必须手动设置 SecureProtocols
-    s += "xhr.Option(9) = &HA80" + nl;
-    s += "xhr.Open \"GET\", \"" + videoUrl + "\", False" + nl;
-    s += "xhr.SetRequestHeader \"Referer\", \"https://www.tangdoucdn.com/\"" + nl;
-    s += "xhr.Send" + nl;
-    s += "If Err.Number <> 0 Then" + nl;
-    s += "  WScript.Echo \"[VBS] Send error: \" & Err.Description" + nl;
-    s += "  WScript.Quit 2" + nl;
-    s += "End If" + nl;
-    s += "If xhr.Status <> 200 Then" + nl;
-    s += "  WScript.Echo \"[VBS] HTTP \" & xhr.Status" + nl;
-    s += "  WScript.Quit 1" + nl;
-    s += "End If" + nl;
-    s += "Set stream = CreateObject(\"ADODB.Stream\")" + nl;
-    s += "stream.Type = 1" + nl;
-    s += "stream.Open" + nl;
-    s += "stream.Write xhr.ResponseBody" + nl;
-    s += "stream.SaveToFile \"" + savePath + "\", 2" + nl;
-    s += "stream.Close" + nl;
-    s += "If Err.Number <> 0 Then" + nl;
-    s += "  WScript.Echo \"[VBS] Save error: \" & Err.Description" + nl;
-    s += "  WScript.Quit 3" + nl;
-    s += "End If" + nl;
-    return s;
-}
-
+// 纯 ffmpeg 方案：用 ffmpeg 直接下载（自带 HTTP 引擎，不依赖系统 WinHTTP/TLS）
 function t_buildBatch(bitrate, afilter) {
     var nl = "\r\n", s = "@echo off" + nl;
     s += ">\"" + t_progress + "\" echo [START]" + nl;
     var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+    var ff = "\"" + escPct(g_ffmpeg) + "\"";
+    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\r\n\"";
     for (var i = 0; i < t_tasks.length; i++) {
         var t = t_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
         var tmpVideo = escPct(t_progress.replace('tangdou_mp3_progress.log','td_' + t.vid + '.mp4'));
-        var vbsPath = escPct(t_progress.replace('tangdou_mp3_progress.log','td_' + t.vid + '.vbs'));
 
-        // Step 1: cscript 运行 VBScript 下载（带 Referer 头）
-        var vbsLog = escPct(t_progress.replace('tangdou_mp3_progress.log','td_' + t.vid + '_dl.log'));
-        s += "cscript //nologo \"" + vbsPath + "\" >\"" + vbsLog + "\" 2>&1" + nl;
+        // Step 1: ffmpeg 下载视频到临时文件
+        s += ff + " -y" + hdr + " -i \"" + safeUrl + "\" -c copy \"" + tmpVideo + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto tfail" + i + nl;
-        s += "del \"" + vbsPath + "\"" + nl;
-        // 校验下载文件大小（<1MB 说明下载到了占位视频）
         s += "for %%F in (\"" + tmpVideo + "\") do if %%~zF LSS 1048576 goto tfail" + i + nl;
 
-        // Step 2: ffmpeg 转换本地文件
-        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        // Step 2: ffmpeg 转换本地文件为 MP3
+        s += ff + " -y -i \"" + tmpVideo + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto tfail" + i + nl;
 
         // Step 3: 清理临时视频
@@ -536,7 +504,8 @@ function t_startConvert() {
         $("t_status").innerText = "正在解析 " + (j+1) + " / " + vids.length + " ...";
         var info = t_getVideoInfo(vids[j]);
         if (info.error) { log("tangdou", "  [FAIL] " + info.error); continue; }
-        var videoUrl = useLowQ ? t_downgradeUrl(info.url) : info.url;
+        var videoUrl = info.url.replace(/^https:\/\//i, "http://");
+        if (useLowQ) videoUrl = t_downgradeUrl(videoUrl);
         var baseName = safeName(info.title); if (baseName == "") baseName = "tangdou_" + info.vid;
         var outName = baseName, n = 1;
         while (usedNames[outName.toLowerCase()]) { outName = baseName + "_" + n; n++; }
@@ -549,14 +518,6 @@ function t_startConvert() {
     log("tangdou", "成功解析 " + t_total + " 个视频，开始下载转换...");
     $("t_status").innerText = "0 / " + t_total + " 已完成";
     var tmp = fso.GetSpecialFolder(2).Path;
-
-    // 生成 VBScript 下载脚本（WinHttp 带 Referer，Win7 原生支持）
-    for (var k = 0; k < t_tasks.length; k++) {
-        var tk = t_tasks[k];
-        var vbsPath = tmp + "\\td_" + tk.vid + ".vbs";
-        var vbs = t_buildVbs(tk.url, tmp + "\\td_" + tk.vid + ".mp4");
-        writeAnsi(vbsPath, vbs);
-    }
 
     t_progress = tmp + "\\tangdou_mp3_progress.log";
     t_batch = tmp + "\\tangdou_mp3_convert.bat";
