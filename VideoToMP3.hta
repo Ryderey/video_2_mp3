@@ -413,7 +413,6 @@ function t_getVideoInfo(vid) {
     } catch (e) { return { error: e.message }; }
 }
 
-function t_downgradeUrl(url) { return /_[HV]\d+P/i.test(url) ? url.replace(/_[HV]\d+P/i, "_V360P") : url; }
 
 function t_pickOutDir() {
     var shell = new ActiveXObject("Shell.Application");
@@ -491,7 +490,6 @@ function t_startConvert() {
     var skipStart = parseInt($("t_skipStart").value, 10); if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
     var skipEnd = parseInt($("t_skipEnd").value, 10); if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
     var repeat2 = $("t_repeat2").checked;
-    var useLowQ = $("t_lowQuality").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
     $("t_btnStart").disabled = true; $("t_bar").style.width = "0%"; $("t_status").innerText = "正在解析链接...";
     t_tasks = []; t_reported = 0;
@@ -505,7 +503,6 @@ function t_startConvert() {
         var info = t_getVideoInfo(vids[j]);
         if (info.error) { log("tangdou", "  [FAIL] " + info.error); continue; }
         var videoUrl = info.url.replace(/^https:\/\//i, "http://");
-        if (useLowQ) videoUrl = t_downgradeUrl(videoUrl);
         var baseName = safeName(info.title); if (baseName == "") baseName = "tangdou_" + info.vid;
         var outName = baseName, n = 1;
         while (usedNames[outName.toLowerCase()]) { outName = baseName + "_" + n; n++; }
@@ -615,7 +612,6 @@ function t_poll() {
         <div class="row">
             <span class="lbl">音质：</span>
             <select id="t_bitrate"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select>
-            &nbsp;&nbsp;<input type="checkbox" id="t_lowQuality" checked /><label for="t_lowQuality">使用最低画质（省流量，只要声音不影响）</label>
         </div>
         <div class="row">
             <span class="lbl">输出目录：</span>

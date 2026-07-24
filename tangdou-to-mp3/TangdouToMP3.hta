@@ -366,14 +366,6 @@ function getVideoInfo(vid) {
     }
 }
 
-// 清晰度降级：替换为最低画质（只要音频，省流量）
-function downgradeUrl(url) {
-    if (/_[HV]\d+P/i.test(url)) {
-        return url.replace(/_[HV]\d+P/i, "_V360P");
-    }
-    return url;
-}
-
 // ================= 构建音频滤镜 =================
 function buildAudioFilter(skipStart, skipEnd, repeat2) {
     var parts = [];
@@ -502,7 +494,6 @@ function startConvert() {
     var skipEnd = parseInt($("skipEnd").value, 10);
     if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
     var repeat2 = $("repeat2").checked;
-    var useLowQ = $("lowQuality").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
 
     // 界面状态
@@ -534,10 +525,6 @@ function startConvert() {
         // Win7 未打补丁时 WinHTTP 不支持 TLS1.2，HTTPS 下载会失败
         // 七牛 CDN 支持 HTTP 访问（sign 参数已鉴权），转为 HTTP 确保兼容
         videoUrl = videoUrl.replace(/^https:\/\//i, "http://");
-        if (useLowQ) {
-            videoUrl = downgradeUrl(videoUrl);
-            dbg("降级URL: " + videoUrl);
-        }
 
         // 生成安全文件名，重名加序号
         var baseName = safeName(info.title);
@@ -693,9 +680,6 @@ function poll() {
             <option value="192" selected>192 kbps</option>
             <option value="320">320 kbps</option>
         </select>
-        &nbsp;&nbsp;
-        <input type="checkbox" id="lowQuality" checked />
-        <label for="lowQuality">使用最低画质（省流量，只要声音不影响）</label>
     </div>
 
     <div class="row">
