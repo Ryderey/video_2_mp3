@@ -582,7 +582,7 @@ function buildBatch(bitrate, afilter) {
     var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
     var ff = "\"" + escPct(g_ffmpeg) + "\"";
     // 糖豆 CDN 要求 Referer 头，否则返回 302 假文件
-    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\r\n\"";
+    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\"";
 
     for (var i = 0; i < g_tasks.length; i++) {
         var t = g_tasks[i];

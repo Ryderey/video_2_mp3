@@ -1,7 +1,6 @@
 # ffmpeg 二进制（用户自行下载）
-**/ffmpeg.exe
-**/ffprobe.exe
-**/ffmpeg*.exe
+bin/ffmpeg.exe
+bin/ffprobe.exe
 
 # 输出目录
 Download/

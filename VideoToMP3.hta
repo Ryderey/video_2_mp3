@@ -443,7 +443,7 @@ function t_buildBatch(bitrate, afilter) {
     s += ">\"" + t_progress + "\" echo [START]" + nl;
     var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
     var ff = "\"" + escPct(g_ffmpeg) + "\"";
-    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\r\n\"";
+    var hdr = " -headers \"Referer: https://www.tangdoucdn.com/\\r\\n\"";
     for (var i = 0; i < t_tasks.length; i++) {
         var t = t_tasks[i];
         var outPath = escPct(t.outFile);
