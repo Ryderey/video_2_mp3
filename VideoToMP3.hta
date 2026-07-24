@@ -153,6 +153,8 @@ function fitLog(panel) {
     el.style.height = h + "px";
 }
 
+// 转义批处理中的百分号（% 即使在引号内也会被 cmd 展开为变量）
+// & 在双引号内是字面量，无需转义，否则 ^& 会变成字面量 ^& 破坏 URL/路径
 function escPct(s) { return s.replace(/%/g, "%%"); }
 function writeAnsi(path, content) { var ts = fso.CreateTextFile(path, true, false); ts.Write(content); ts.Close(); }
 function readAllSafe(path) { try { var ts = fso.OpenTextFile(path, 1, false); var t = ts.ReadAll(); ts.Close(); return t; } catch (e) { return null; } }
@@ -302,7 +304,7 @@ function m_buildBatch(bitrate, afilter) {
     for (var i = 0; i < m_files.length; i++) {
         var inPath = escPct(m_files[i].Path);
         var outPath = escPct(m_computeOutPath(m_files[i], used));
-        s += "\"" + g_ffmpeg + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto mfail" + i + nl;
         s += ">>\"" + m_progress + "\" echo [OK]" + nl;
         s += "goto mnext" + i + nl;
@@ -444,7 +446,7 @@ function t_buildBatch(bitrate, afilter) {
         var t = t_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        s += "\"" + g_ffmpeg + "\" -y -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + safeUrl + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         s += "if errorlevel 1 goto tfail" + i + nl;
         s += ">>\"" + t_progress + "\" echo [OK]" + nl;
         s += "goto tnext" + i + nl;

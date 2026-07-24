@@ -272,7 +272,8 @@ function toMp3Path(fullPath) {
     return base + ".mp3";
 }
 
-// 转义批处理中的百分号（% 即使在引号内也会被 cmd 展开）
+// 转义批处理中的百分号（% 即使在引号内也会被 cmd 展开为变量）
+// & 在双引号内是字面量，无需转义，否则 ^& 会变成字面量 ^& 破坏路径
 function escPct(s) {
     return s.replace(/%/g, "%%");
 }
@@ -488,7 +489,7 @@ function buildBatch(bitrate, afilter) {
         // % 需转义为 %%，否则含 % 的路径会被 cmd 错误展开
         var inPath = escPct(g_files[i].Path);
         var outPath = escPct(computeOutPath(g_files[i], used));
-        s += "\"" + g_ffmpeg + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        s += "\"" + escPct(g_ffmpeg) + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
         // 仅写入 [OK]/[FAIL] 标记，不含文件名，避免文件名中的 ) 提前关闭括号块
         s += "if errorlevel 1 goto fail" + i + nl;
         s += ">>\"" + g_progress + "\" echo [OK]" + nl;

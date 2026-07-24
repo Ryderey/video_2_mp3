@@ -271,6 +271,8 @@ function fitLog() {
     el.style.height = h + "px";
 }
 
+// 转义批处理中的百分号（% 即使在引号内也会被 cmd 展开为变量）
+// & 在双引号内是字面量，无需转义，否则 ^& 会变成字面量 ^& 破坏 URL
 function escPct(s) { return s.replace(/%/g, "%%"); }
 
 function writeAnsi(path, content) {
@@ -592,7 +594,7 @@ function buildBatch(bitrate, afilter) {
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
         // ffmpeg 直接读取带签名的 HTTP 视频流（无需 Referer）
-        var cmd = "\"" + g_ffmpeg + "\" -y"
+        var cmd = "\"" + escPct(g_ffmpeg) + "\" -y"
             + " -i \"" + safeUrl + "\""
             + " -vn" + afArg
             + " -acodec libmp3lame -ab " + bitrate + "k"
