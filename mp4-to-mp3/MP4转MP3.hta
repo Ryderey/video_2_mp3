@@ -19,6 +19,7 @@
     body {
         font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
         font-size: 17px;
+        font-weight: bold;
         line-height: 1.5;
         background: #eef2f5;
         color: #1c2733;
@@ -80,6 +81,15 @@
     }
     .btn-primary:hover { background: #f6851c; border-color: #e8770d; }
     .btn-primary[disabled] { background: #e3c9a6; border-color: #d9c2a0; color: #fff; cursor: default; }
+    .btn-danger {
+        background: #c0392b;
+        border-color: #a93226;
+        color: #fff;
+        font-size: 20px;
+        padding: 12px 36px;
+    }
+    .btn-danger:hover { background: #d64535; border-color: #c0392b; }
+    .btn-danger[disabled] { background: #d4a5a0; border-color: #cbb0ac; color: #fff; cursor: default; }
     /* ---- 路径文字 ---- */
     .path {
         display: inline-block;
@@ -210,6 +220,7 @@ var g_timer    = null;    // 轮询定时器
 var g_reported = 0;       // 已在日志区显示过结果的文件数
 var g_outDir   = "";      // 自定义输出目录（为空=与源同目录）
 var g_debugLog = "";      // 调试日志文件路径（默认不写入）
+var g_lastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
 
 // ================= 工具函数 =================
 function $(id) { return document.getElementById(id); }
@@ -347,6 +358,13 @@ function toggleAdv() {
     box.style.display = open ? "none" : "block";
     $("btnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
     fitLog();
+}
+
+// 清零：重置跳过时间与重复拼接为初始值
+function resetAdv() {
+    $("skipStart").value = "0";
+    $("skipEnd").value = "0";
+    $("repeat2").checked = false;
 }
 
 // 限制输入框只能输入整数（数字 0-9 与退格键）
@@ -548,9 +566,11 @@ function startConvert() {
     // 界面状态
     $("btnStart").disabled = true;
     $("btnPick").disabled = true;
+    $("btnStop").disabled = false;
     $("bar").style.width = "0%";
     $("status").innerText = "0 / " + g_total + " 已完成";
     g_reported = 0;
+    g_lastProgressTime = new Date().getTime();
     var outDesc = g_outDir != "" ? g_outDir : "与源文件同目录";
     log("---- 开始转换，共 " + g_total + " 个文件，音质 " + bitrate + "kbps ----");
     log("输出目录: " + outDesc);
@@ -558,11 +578,25 @@ function startConvert() {
     if (skipEnd > 0) log("跳过后面 " + skipEnd + " 秒");
     if (repeat2) log("剪切后重复拼接成 2 遍");
 
-    // 最小化、不激活、异步运行批处理
-    wsh.Run("\"" + g_batch + "\"", 7, false);
+    // 隐藏窗口、不激活、异步运行批处理
+    wsh.Run("\"" + g_batch + "\"", 0, false);
 
     // 轮询进度
     g_timer = window.setInterval(poll, 500);
+}
+
+// ================= 手动停止转换 =================
+function stopConvert() {
+    // 强杀 ffmpeg（批处理会因 ffmpeg 退出而继续，最终写入 [DONE]）
+    try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+    // 清除轮询
+    if (g_timer) { window.clearInterval(g_timer); g_timer = null; }
+    // 恢复界面
+    $("btnStop").disabled = true;
+    $("btnStart").disabled = (g_total == 0);
+    $("btnPick").disabled = false;
+    log("---- 用户手动停止了转换 ----");
+    $("status").innerText = "已停止";
 }
 
 // ================= 轮询进度 =================
@@ -585,15 +619,25 @@ function poll() {
         var tag = results[k] ? "[OK]  " : "[FAIL]";
         log(tag + " " + g_files[k].Name);
     }
+    // 有新进度则刷新超时计时器
+    if (results.length > g_reported) g_lastProgressTime = new Date().getTime();
     g_reported = results.length;
 
     var pct = g_total > 0 ? Math.floor(finished * 100 / g_total) : 0;
     $("bar").style.width = pct + "%";
     $("status").innerText = finished + " / " + g_total + " 已完成";
 
+    // 超时兜底：5 分钟无新进度则强杀 ffmpeg，让批处理跳到下一个文件
+    if (!done && (new Date().getTime() - g_lastProgressTime > 300000)) {
+        log("[超时] 当前文件转换超过 5 分钟无响应，已强制跳过。");
+        try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+        g_lastProgressTime = new Date().getTime(); // 重置，给下一个文件重新计时
+    }
+
     if (done) {
         window.clearInterval(g_timer);
         g_timer = null;
+        $("btnStop").disabled = true;
         $("bar").style.width = "100%";
         log("---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
         $("btnStart").disabled = (g_total == 0);
@@ -665,7 +709,7 @@ function poll() {
             <option value="320">320 kbps</option>
         </select>
         &nbsp;&nbsp;
-        <input type="checkbox" id="recursive" onclick="rescan()" />
+        <input type="checkbox" id="recursive" checked onclick="rescan()" />
         <label for="recursive">包含子文件夹</label>
     </div>
 
@@ -683,13 +727,15 @@ function poll() {
     <div id="advBox">
         <div class="advtitle">高级选项（默认无需修改）</div>
         <div class="advrow">
-            跳过前面<input type="text" id="skipStart" class="num" value="0" onkeypress="onlyDigits()" />秒
+            跳过前面<input type="text" id="skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
             &nbsp;&nbsp;&nbsp;&nbsp;
-            跳过后面<input type="text" id="skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒
+            跳过后面<input type="text" id="skipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒
             <span class="unit">（填 0 表示不跳过，只支持整数秒）</span>
+            &nbsp;&nbsp;
+            <button class="btn" onclick="resetAdv()">清零</button>
         </div>
         <div class="advrow">
-            <input type="checkbox" id="repeat2" />
+            <input type="checkbox" id="repeat2" checked />
             <label for="repeat2">剪切后再重复拼接成 2 遍</label>
         </div>
         <div class="advrow">
@@ -700,6 +746,8 @@ function poll() {
 
     <div class="row">
         <button id="btnStart" class="btn btn-primary" onclick="startConvert()" disabled>开始转换</button>
+        &nbsp;&nbsp;
+        <button id="btnStop" class="btn btn-danger" onclick="stopConvert()" disabled>停止转换</button>
         &nbsp;&nbsp;
         <input type="checkbox" id="openAfter" checked />
         <label for="openAfter">完成后打开文件夹</label>
