@@ -34,6 +34,7 @@ class MainActivity : FlutterActivity() {
                         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                             addFlags(
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
                                         Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
                             )
                         }
@@ -48,6 +49,7 @@ class MainActivity : FlutterActivity() {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
                                     Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                         }
                         startActivityForResult(intent, REQUEST_PICK_FILE)
@@ -124,6 +126,22 @@ class MainActivity : FlutterActivity() {
                         }
                     }
 
+                    "deleteByUri" -> {
+                        val uri = call.argument<String>("uri") ?: ""
+                        try {
+                            val parsedUri = Uri.parse(uri)
+                            val docFile = if (parsedUri.pathSegments.contains("document")) {
+                                DocumentFile.fromSingleUri(this@MainActivity, parsedUri)
+                            } else {
+                                DocumentFile.fromTreeUri(this@MainActivity, parsedUri)
+                            }
+                            val deleted = docFile?.delete() ?: false
+                            result.success(deleted)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+
                     else -> result.notImplemented()
                 }
             }
@@ -155,7 +173,9 @@ class MainActivity : FlutterActivity() {
         when (requestCode) {
             REQUEST_PICK_TREE -> {
                 val uri = data.data ?: return result.success(null)
-                safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                safeTakePersistableUriPermission(uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 val name = getDisplayNameFromUri(uri)
                 result.success(mapOf("uri" to uri.toString(), "name" to name))
             }
@@ -166,14 +186,18 @@ class MainActivity : FlutterActivity() {
                 if (clipData != null) {
                     for (i in 0 until clipData.itemCount) {
                         val uri = clipData.getItemAt(i).uri
-                        safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        safeTakePersistableUriPermission(uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                         val name = getDisplayNameFromUri(uri)
                         uris.add(mapOf("uri" to uri.toString(), "name" to name))
                     }
                 } else {
                     val uri = data.data
                     if (uri != null) {
-                        safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        safeTakePersistableUriPermission(uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                         val name = getDisplayNameFromUri(uri)
                         uris.add(mapOf("uri" to uri.toString(), "name" to name))
                     }
@@ -269,10 +293,10 @@ class MainActivity : FlutterActivity() {
      */
     private fun getDisplayNameFromUri(uri: Uri): String {
         try {
-            val docFile = if (uri.path?.contains("/tree/") == true) {
-                DocumentFile.fromTreeUri(this, uri)
-            } else {
+            val docFile = if (uri.pathSegments.contains("document")) {
                 DocumentFile.fromSingleUri(this, uri)
+            } else {
+                DocumentFile.fromTreeUri(this, uri)
             }
             if (docFile != null) {
                 val name = docFile.name

@@ -337,6 +337,19 @@ class ConversionProvider extends ChangeNotifier {
               cacheFilePath: cacheOutput,
             );
           }
+          // 6.5 删除源文件（如果用户勾选）—— 仅在输出已写入时执行，失败仅记日志不中断流程
+          if (_deleteSource && task.outputTreeUri != null && task.outputTreeUri!.isNotEmpty) {
+            try {
+              final deleted = await FileService.deleteByUri(task.contentUri);
+              if (deleted) {
+                addLog('已删除源文件: ${task.fileName}');
+              } else {
+                addLog('删除源文件失败（权限不足或文件不存在）: ${task.fileName}');
+              }
+            } catch (e) {
+              addLog('删除源文件异常: ${task.fileName} ($e)');
+            }
+          }
           task.status = ConversionStatus.success;
           _successCount++;
           addLog('[OK]  ${task.fileName}');
