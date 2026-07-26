@@ -25,7 +25,7 @@ class Mp4ToMp3App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ConversionProvider(),
+      create: (_) => ConversionProvider()..init(),
       child: MaterialApp(
         title: 'MP4转MP3',
         debugShowCheckedModeBanner: false,

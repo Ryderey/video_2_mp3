@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/conversion_task.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/file_service.dart';
@@ -9,6 +10,28 @@ import '../services/file_service.dart';
 /// 不直接调用 FFmpegKit API，不处理 SAF URI 转换。
 class ConversionProvider extends ChangeNotifier {
   final FfmpegService _ffmpegService = FfmpegService();
+
+  // ===== 持久化 key =====
+  static const _keyUseCustomOutDir = 'use_custom_out_dir';
+  static const _keyOutputTreeUri = 'output_tree_uri';
+  static const _keyOutputDisplayName = 'output_display_name';
+
+  /// 从 SharedPreferences 恢复持久化设置
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _useCustomOutDir = prefs.getBool(_keyUseCustomOutDir) ?? false;
+    _outputTreeUri = prefs.getString(_keyOutputTreeUri) ?? '';
+    _outputDisplayName = prefs.getString(_keyOutputDisplayName) ?? '';
+    notifyListeners();
+  }
+
+  /// 持久化输出目录设置
+  Future<void> _persistOutputDirSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyUseCustomOutDir, _useCustomOutDir);
+    await prefs.setString(_keyOutputTreeUri, _outputTreeUri);
+    await prefs.setString(_keyOutputDisplayName, _outputDisplayName);
+  }
 
   // ===== 文件选择状态 =====
   String _inputTreeUri = ''; // 输入文件夹 tree URI
@@ -98,6 +121,7 @@ class ConversionProvider extends ChangeNotifier {
       _outputTreeUri = '';
       _outputDisplayName = '';
     }
+    _persistOutputDirSettings();
     notifyListeners();
   }
 
@@ -160,6 +184,7 @@ class ConversionProvider extends ChangeNotifier {
     _outputTreeUri = result.treeUri;
     _outputDisplayName = result.displayName;
     _useCustomOutDir = true;
+    _persistOutputDirSettings();
     addLog('输出目录: ${result.displayName}');
     notifyListeners();
   }
