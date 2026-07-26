@@ -129,6 +129,18 @@ class MainActivity : FlutterActivity() {
             }
     }
 
+    /**
+     * Safely take persistable URI permission.
+     * Some content providers don't support persistable permissions and throw SecurityException.
+     */
+    private fun safeTakePersistableUriPermission(uri: Uri, flags: Int) {
+        try {
+            contentResolver.takePersistableUriPermission(uri, flags)
+        } catch (_: SecurityException) {
+            // Provider doesn't support persistable permissions; session-scoped permission still works
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -143,10 +155,7 @@ class MainActivity : FlutterActivity() {
         when (requestCode) {
             REQUEST_PICK_TREE -> {
                 val uri = data.data ?: return result.success(null)
-                // Persist read permission
-                contentResolver.takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
+                safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 val name = getDisplayNameFromUri(uri)
                 result.success(mapOf("uri" to uri.toString(), "name" to name))
             }
@@ -157,18 +166,14 @@ class MainActivity : FlutterActivity() {
                 if (clipData != null) {
                     for (i in 0 until clipData.itemCount) {
                         val uri = clipData.getItemAt(i).uri
-                        contentResolver.takePersistableUriPermission(
-                            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
+                        safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         val name = getDisplayNameFromUri(uri)
                         uris.add(mapOf("uri" to uri.toString(), "name" to name))
                     }
                 } else {
                     val uri = data.data
                     if (uri != null) {
-                        contentResolver.takePersistableUriPermission(
-                            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
+                        safeTakePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         val name = getDisplayNameFromUri(uri)
                         uris.add(mapOf("uri" to uri.toString(), "name" to name))
                     }
@@ -178,8 +183,7 @@ class MainActivity : FlutterActivity() {
 
             REQUEST_PICK_OUTPUT_TREE -> {
                 val uri = data.data ?: return result.success(null)
-                // Persist read+write permission
-                contentResolver.takePersistableUriPermission(
+                safeTakePersistableUriPermission(
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -261,21 +265,29 @@ class MainActivity : FlutterActivity() {
 
     /**
      * Get display name from a URI.
+     * Handles both tree URIs and single document URIs safely.
      */
     private fun getDisplayNameFromUri(uri: Uri): String {
-        val docFile = DocumentFile.fromTreeUri(this, uri)
-            ?: DocumentFile.fromSingleUri(this, uri)
-        if (docFile != null) {
-            val name = docFile.name
-            if (!name.isNullOrEmpty()) return name
-        }
-        // Fallback: query content resolver
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val idx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                if (idx >= 0) return cursor.getString(idx)
+        try {
+            val docFile = if (uri.path?.contains("/tree/") == true) {
+                DocumentFile.fromTreeUri(this, uri)
+            } else {
+                DocumentFile.fromSingleUri(this, uri)
             }
-        }
+            if (docFile != null) {
+                val name = docFile.name
+                if (!name.isNullOrEmpty()) return name
+            }
+        } catch (_: Exception) {}
+        // Fallback: query content resolver
+        try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                    if (idx >= 0) return cursor.getString(idx)
+                }
+            }
+        } catch (_: Exception) {}
         return uri.lastPathSegment ?: "unknown"
     }
 }
