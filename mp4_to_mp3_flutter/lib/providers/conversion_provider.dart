@@ -44,7 +44,6 @@ class ConversionProvider extends ChangeNotifier {
   int _skipStart = 5;
   int _skipEnd = 3;
   bool _repeat2 = true;
-  bool _deleteSource = false;
   bool _useCustomOutDir = false;
   String _outputTreeUri = ''; // 输出目录 tree URI
   String _outputDisplayName = '';
@@ -68,7 +67,6 @@ class ConversionProvider extends ChangeNotifier {
   int get skipStart => _skipStart;
   int get skipEnd => _skipEnd;
   bool get repeat2 => _repeat2;
-  bool get deleteSource => _deleteSource;
   bool get useCustomOutDir => _useCustomOutDir;
   String get outputTreeUri => _outputTreeUri;
   String get outputDisplayName => _outputDisplayName;
@@ -107,11 +105,6 @@ class ConversionProvider extends ChangeNotifier {
 
   set repeat2(bool value) {
     _repeat2 = value;
-    notifyListeners();
-  }
-
-  set deleteSource(bool value) {
-    _deleteSource = value;
     notifyListeners();
   }
 
@@ -336,19 +329,6 @@ class ConversionProvider extends ChangeNotifier {
               fileName: task.outputFileName,
               cacheFilePath: cacheOutput,
             );
-          }
-          // 6.5 删除源文件（如果用户勾选）—— 仅在输出已写入时执行，失败仅记日志不中断流程
-          if (_deleteSource && task.outputTreeUri != null && task.outputTreeUri!.isNotEmpty) {
-            try {
-              final deleted = await FileService.deleteByUri(task.contentUri);
-              if (deleted) {
-                addLog('已删除源文件: ${task.fileName}');
-              } else {
-                addLog('删除源文件失败（权限不足或文件不存在）: ${task.fileName}');
-              }
-            } catch (e) {
-              addLog('删除源文件异常: ${task.fileName} ($e)');
-            }
           }
           task.status = ConversionStatus.success;
           _successCount++;

@@ -107,15 +107,4 @@ class FileService {
   static Future<void> releasePermission(String uri) async {
     await _channel.invokeMethod('releasePermission', {'uri': uri});
   }
-
-  /// 通过 SAF URI 删除文件。
-  /// 删除失败或异常时返回 false，不抛出异常。
-  static Future<bool> deleteByUri(String uri) async {
-    try {
-      final result = await _channel.invokeMethod<bool>('deleteByUri', {'uri': uri});
-      return result ?? false;
-    } catch (_) {
-      return false;
-    }
-  }
 }

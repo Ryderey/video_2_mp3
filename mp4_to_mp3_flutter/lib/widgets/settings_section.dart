@@ -270,64 +270,9 @@ class _SettingsSectionState extends State<SettingsSection> {
             onChanged:
                 provider.isConverting ? null : (v) => provider.repeat2 = v,
           ),
-          const SizedBox(height: 8),
-          // 删除源文件
-          _buildSwitchTile(
-            label: '转换成功后删除原 MP4 文件',
-            value: provider.deleteSource,
-            onChanged: provider.isConverting
-                ? null
-                : (v) => _onDeleteSourceToggle(context, provider, v),
-          ),
         ],
       ),
     );
-  }
-
-  /// 删除源文件开关（需二次确认）
-  Future<void> _onDeleteSourceToggle(
-    BuildContext context,
-    ConversionProvider provider,
-    bool value,
-  ) async {
-    if (value) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text(
-            '提示',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            '勾选后，转换成功的 MP4 源文件将被删除（无法恢复）。\n\n确定要勾选吗？',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text(
-                '取消',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.danger,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text(
-                '确定删除',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      );
-      provider.deleteSource = confirmed ?? false;
-    } else {
-      provider.deleteSource = false;
-    }
   }
 
   /// 数字输入框
