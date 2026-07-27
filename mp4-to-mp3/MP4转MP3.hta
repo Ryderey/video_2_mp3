@@ -221,6 +221,8 @@ var g_reported = 0;       // 已在日志区显示过结果的文件数
 var g_outDir   = "";      // 自定义输出目录（为空=与源同目录）
 var g_debugLog = "";      // 调试日志文件路径（默认不写入）
 var g_lastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
+var g_settingsFile = "";  // 程序目录下 settings.ini 路径（输出目录持久化）
+var g_pickedFiles = [];   // "选择文件"模式下累积的文件路径数组
 
 // ================= 工具函数 =================
 function $(id) { return document.getElementById(id); }
@@ -270,9 +272,22 @@ function onDebugToggle() {
 
 // 从 window.location 反推 HTA 所在目录（兼容中文/空格路径）
 function resolveAppDir() {
-    var href = decodeURIComponent(window.location.href);
-    var p = href.replace(/^file:\/*/i, "").replace(/\//g, "\\");
-    return fso.GetParentFolderName(p);
+    try {
+        var href = window.location.href;
+        // 去掉 query string 和 fragment（HTA 可能被传入参数）
+        href = href.replace(/[?#].*$/, "");
+        href = decodeURIComponent(href);
+        var p = href.replace(/^file:\/*/i, "").replace(/\//g, "\\");
+        return fso.GetParentFolderName(p);
+    } catch (e) {
+        // 回退：用 location.pathname
+        try {
+            var p2 = decodeURIComponent(window.location.pathname).replace(/\//g, "\\");
+            return fso.GetParentFolderName(p2);
+        } catch (e2) {
+            return "";
+        }
+    }
 }
 
 // 去掉扩展名并换成 .mp3
@@ -416,6 +431,8 @@ function init() {
     g_batch    = tmp + "\\mp4_to_mp3_convert.bat";
 
     log("程序目录: " + g_appDir);
+    g_settingsFile = g_appDir + "\\settings.ini";
+    log("配置文件: " + g_settingsFile + (fso.FileExists(g_settingsFile) ? "（已存在）" : "（不存在）"));
     if (fso.FileExists(g_ffmpeg)) {
         log("已找到 ffmpeg: bin\\ffmpeg.exe");
     } else {
@@ -424,7 +441,9 @@ function init() {
         $("banner").style.display = "block";
         $("btnStart").disabled = true;
         $("btnPick").disabled = true;
+        $("btnPickFile").disabled = true;
     }
+    loadSettings();
     fitLog();
 }
 
@@ -440,8 +459,55 @@ function pickFolder() {
     }
     g_folder = self.Path;
     $("path").innerText = g_folder;
+    // 切换到文件夹模式，清空文件选择累积
+    g_pickedFiles = [];
+    try { $("filePicker").value = ""; } catch (e) {}
     dbg("选择文件夹: " + g_folder);
     rescan();
+}
+
+// ================= 选择文件（Windows 原生文件对话框）=================
+// 通过隐藏的 <input type="file"> 触发，HTA 在 Local Machine zone
+// 下 picker.value 可读取完整路径。每次选一个文件，累积到列表中。
+// 注意：IE/HTA 中 files[i].name 仅返回文件名（无路径），不可用。
+function pickFiles() {
+    var picker = $("filePicker");
+    try { picker.value = ""; } catch (e) {} // 清空，确保重复选同一文件也触发 onchange
+    picker.click();
+}
+
+function onFilesPicked() {
+    var picker = $("filePicker");
+    var p = "";
+    try { p = picker.value; } catch (e) {}
+    if (!p || !/\.mp4$/i.test(p)) return; // 用户取消或未选 mp4
+
+    // 去重：检查是否已在列表中
+    for (var i = 0; i < g_pickedFiles.length; i++) {
+        if (g_pickedFiles[i].toLowerCase() === p.toLowerCase()) {
+            dbg("文件已在列表中，跳过: " + p);
+            return;
+        }
+    }
+    g_pickedFiles.push(p);
+
+    // 重建 g_files（FSO File 对象数组），同时剔除无效路径
+    var selected = [];
+    var validPaths = [];
+    for (var j = 0; j < g_pickedFiles.length; j++) {
+        try { selected.push(fso.GetFile(g_pickedFiles[j])); validPaths.push(g_pickedFiles[j]); } catch (e2) {
+            dbg("文件无效已移除: " + g_pickedFiles[j]);
+        }
+    }
+    g_pickedFiles = validPaths;
+    g_folder = ""; // 与"选择文件夹"模式互斥
+    g_files = selected;
+    g_total = g_files.length;
+    $("path").innerText = "已选择 " + g_total + " 个文件（继续点击可追加）";
+    $("found").innerText = "发现 " + g_total + " 个 MP4 文件";
+    $("btnStart").disabled = false;
+    dbg("选择文件模式: 已累积 " + g_total + " 个文件，新增: " + p);
+    for (var di = 0; di < g_files.length; di++) dbg("  待转换[" + di + "]: " + g_files[di].Path);
 }
 
 function rescan() {
@@ -467,6 +533,7 @@ function toggleOutDir() {
     } else if (g_outDir == "") {
         pickOutDir();
     }
+    saveSettings();
 }
 
 // 选择输出目录
@@ -484,6 +551,49 @@ function pickOutDir() {
     }
     g_outDir = self.Path;
     $("outPath").innerText = g_outDir;
+    saveSettings();
+}
+
+// ================= 设置持久化（程序目录 settings.ini）=================
+// 简单 INI 格式，删除程序文件夹时文件随之消失，无系统残留。
+function saveSettings() {
+    try {
+        if (g_settingsFile == "") return;
+        var s = "[Output]\r\n";
+        s += "UseOutDir=" + ($("useOutDir").checked ? "1" : "0") + "\r\n";
+        s += "OutDir=" + g_outDir + "\r\n";
+        writeAnsi(g_settingsFile, s);
+        if (!fso.FileExists(g_settingsFile)) {
+            log("配置保存异常: 文件写入后不存在");
+        }
+    } catch (e) {
+        log("配置保存失败: " + e.message);
+    }
+}
+
+function loadSettings() {
+    try {
+        if (g_settingsFile == "") return;
+        if (!fso.FileExists(g_settingsFile)) return;
+        var txt = readAllSafe(g_settingsFile);
+        if (!txt) { log("配置文件读取失败"); return; }
+        var mUse = txt.match(/UseOutDir=(\d)/);
+        var mDir = txt.match(/^OutDir=([^\r\n]*)/m);
+        var dir = (mDir && mDir[1]) ? mDir[1].replace(/[\s]+$/, "") : "";
+        if (dir && fso.FolderExists(dir)) {
+            g_outDir = dir;
+        } else if (dir) {
+            log("配置的输出目录不存在: " + dir);
+        }
+        if (mUse && mUse[1] == "1" && g_outDir != "") {
+            $("useOutDir").checked = true;
+            $("btnOutDir").disabled = false;
+            $("outPath").innerText = g_outDir;
+            log("已恢复输出目录: " + g_outDir);
+        }
+    } catch (e) {
+        log("加载配置失败: " + e.message);
+    }
 }
 
 // ================= 生成批处理 =================
@@ -532,7 +642,7 @@ function readAllSafe(path) {
 
 // ================= 开始转换 =================
 function startConvert() {
-    if (g_total == 0) { alert("请先选择包含 MP4 的文件夹。"); return; }
+    if (g_total == 0) { alert("请先选择 MP4 文件或文件夹。"); return; }
     if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
 
     var bitrate = $("bitrate").value;
@@ -566,6 +676,7 @@ function startConvert() {
     // 界面状态
     $("btnStart").disabled = true;
     $("btnPick").disabled = true;
+    $("btnPickFile").disabled = true;
     $("btnStop").disabled = false;
     $("bar").style.width = "0%";
     $("status").innerText = "0 / " + g_total + " 已完成";
@@ -595,6 +706,7 @@ function stopConvert() {
     $("btnStop").disabled = true;
     $("btnStart").disabled = (g_total == 0);
     $("btnPick").disabled = false;
+    $("btnPickFile").disabled = false;
     log("---- 用户手动停止了转换 ----");
     $("status").innerText = "已停止";
 }
@@ -642,6 +754,7 @@ function poll() {
         log("---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
         $("btnStart").disabled = (g_total == 0);
         $("btnPick").disabled = false;
+        $("btnPickFile").disabled = false;
 
         // 将成功转换的源 MP4 移入回收站（仅在勾选时；失败的不处理，避免丢失源文件）
         var deleted = 0;
@@ -671,7 +784,12 @@ function poll() {
         }
 
         if ($("openAfter").checked) {
-            openFolder(g_outDir != "" ? g_outDir : g_folder);
+            var openDir = g_outDir;
+            if (openDir == "") openDir = g_folder;
+            if (openDir == "" && g_files.length > 0) {
+                try { openDir = fso.GetParentFolderName(g_files[0].Path); } catch (e) {}
+            }
+            if (openDir != "") openFolder(openDir);
         }
         var delMsg = deleted > 0 ? "\n已将 " + deleted + " 个源文件移入回收站。" : "";
         alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。" + delMsg);
@@ -694,6 +812,8 @@ function poll() {
 
     <div class="row">
         <button id="btnPick" class="btn" onclick="pickFolder()">选择文件夹</button>
+        &nbsp;
+        <button id="btnPickFile" class="btn" onclick="pickFiles()">选择文件</button>
         <span id="path" class="path">（未选择）</span>
     </div>
 
@@ -767,5 +887,10 @@ function poll() {
         <textarea id="log" readonly></textarea>
     </div>
     </div>
+
+    <!-- 隐藏的文件选择器：必须放在 display:none 容器之外，否则 IE 下 click() 无法打开对话框 -->
+    <input type="file" id="filePicker" accept=".mp4,.MP4"
+           style="position:absolute;left:-9999px;top:-9999px;"
+           onchange="onFilesPicked()" />
 </body>
 </html>
