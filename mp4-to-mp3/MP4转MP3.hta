@@ -752,7 +752,6 @@ function poll() {
         $("btnStop").disabled = true;
         $("bar").style.width = "100%";
         log("---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
-        $("btnStart").disabled = (g_total == 0);
         $("btnPick").disabled = false;
         $("btnPickFile").disabled = false;
 
@@ -790,6 +789,35 @@ function poll() {
                 try { openDir = fso.GetParentFolderName(g_files[0].Path); } catch (e) {}
             }
             if (openDir != "") openFolder(openDir);
+        }
+
+        // 清理列表："选择文件"模式下移除已成功转换的文件，避免转换完成后
+        // 再追加新文件时把旧文件重复转换；失败的文件保留以便直接重试
+        // （文件夹模式由 rescan() 重新扫描，无需处理）
+        if (g_folder == "") {
+            var remain = [];
+            for (var rk = 0; rk < g_files.length; rk++) {
+                // 超出 results 范围（未完成）或转换失败的保留
+                if (rk >= results.length || !results[rk]) remain.push(g_files[rk].Path);
+            }
+            g_pickedFiles = remain;
+            g_files = [];
+            for (var rj = 0; rj < remain.length; rj++) {
+                try { g_files.push(fso.GetFile(remain[rj])); } catch (e3) {
+                    dbg("文件无效已移除: " + remain[rj]);
+                }
+            }
+            g_total = g_files.length;
+            $("found").innerText = "发现 " + g_total + " 个 MP4 文件";
+            if (g_total == 0) {
+                $("path").innerText = "（未选择）";
+                $("btnStart").disabled = true;
+            } else {
+                $("path").innerText = "剩余 " + g_total + " 个未成功文件，可重试或继续添加";
+                $("btnStart").disabled = false;
+            }
+        } else {
+            $("btnStart").disabled = (g_total == 0);
         }
         var delMsg = deleted > 0 ? "\n已将 " + deleted + " 个源文件移入回收站。" : "";
         alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。" + delMsg);
