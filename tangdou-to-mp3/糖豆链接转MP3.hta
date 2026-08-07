@@ -215,7 +215,9 @@ var g_total    = 0;
 var g_debugLog = "";
 var g_lastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
 var g_pollFails = 0;        // 轮询读取进度文件失败计数（排障用）
-var g_tasks    = [];   // {vid, title, url, outFile, errFile}
+var g_inputSnapshot = "";   // 转换开始时输入框内容快照（结束时判断能否自动清理）
+var g_keepLines = [];       // 结束后需保留在输入框的失败行（API 解析阶段失败）
+var g_tasks    = [];   // {vid, title, url, outFile, errFile, line, seq}
 
 // ================= 工具函数 =================
 function $(id) { return document.getElementById(id); }
@@ -455,18 +457,36 @@ function init() {
 function parseInputs() {
     var text = $("urlInput").value;
     var lines = text.split(/\r?\n/);
-    var vids = [];
+    var items = [];
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i].replace(/^\s+|\s+$/g, "");
         if (line == "") continue;
         var vid = parseVid(line);
         if (vid != null) {
-            vids.push(vid);
+            items.push({ vid: vid, line: line });
         } else {
             log("[跳过] 无法识别的链接: " + line);
         }
     }
-    return vids;
+    return items;
+}
+
+// ================= 粘贴 / 清理 =================
+function pasteLinks() {
+    var txt = "";
+    try { txt = window.clipboardData.getData("Text") || ""; } catch (e) {}
+    txt = txt.replace(/^\s+|\s+$/g, "");
+    if (txt == "") { alert("剪贴板中没有内容，请先在微信里复制视频链接。"); return; }
+    var box = $("urlInput");
+    var cur = box.value;
+    if (cur != "" && !/\n$/.test(cur)) cur += "\n";
+    box.value = cur + txt;
+    log("已粘贴 " + txt.split(/\r?\n/).length + " 行链接。");
+}
+
+function clearLinks() {
+    $("urlInput").value = "";
+    log("已清空链接输入框。");
 }
 
 // ================= 开始转换 =================
@@ -503,6 +523,8 @@ function startConvert() {
     g_tasks = [];
     g_reported = 0;
     g_pollFails = 0;
+    g_keepLines = [];
+    g_inputSnapshot = $("urlInput").value;
 
     log("---- 开始处理，共 " + vids.length + " 个链接 ----");
     log("输出目录: " + g_outDir);
@@ -514,11 +536,12 @@ function startConvert() {
     var usedNames = {};
     for (var i = 0; i < vids.length; i++) {
         $("status").innerText = "正在解析 " + (i + 1) + " / " + vids.length + " ...";
-        log("[" + (i + 1) + "/" + vids.length + "] 解析 vid: " + vids[i]);
+        log("[" + (i + 1) + "/" + vids.length + "] 解析 vid: " + vids[i].vid);
 
-        var info = getVideoInfo(vids[i]);
+        var info = getVideoInfo(vids[i].vid);
         if (info.error) {
             log("  [失败] " + info.error);
+            g_keepLines.push({ line: vids[i].line, seq: i });
             continue;
         }
 
@@ -541,7 +564,9 @@ function startConvert() {
             title: info.title,
             url: info.url,
             outFile: g_outDir + "\\" + outName + ".mp3",
-            errFile: errFile
+            errFile: errFile,
+            line: vids[i].line,
+            seq: i
         });
         log("  [OK] " + info.title);
     }
@@ -652,6 +677,7 @@ function poll() {
         var tag = results[k] ? "[OK]  " : "[FAIL]";
         log(tag + " " + g_tasks[k].title + ".mp3");
         if (!results[k]) {
+            g_tasks[k].failed = true;
             // 失败时从 ffmpeg 的 stderr 捕获文件提取最后一行错误，便于排障
             var errTxt = readAllSafe(g_tasks[k].errFile);
             if (errTxt != null) {
@@ -685,6 +711,29 @@ function poll() {
         $("btnStart").disabled = false;
         $("btnStop").disabled = true;
 
+        // 结束后自动清空转换成功的链接，仅保留失败链接便于重试
+        if ($("urlInput").value == g_inputSnapshot) {
+            var keepArr = [];
+            var seen = {};
+            var addKeep = function (line, seq) {
+                if (seen[line]) return;
+                seen[line] = true;
+                keepArr.push({ line: line, seq: seq });
+            };
+            for (var a = 0; a < g_keepLines.length; a++) addKeep(g_keepLines[a].line, g_keepLines[a].seq);
+            for (var b = 0; b < g_tasks.length; b++) {
+                if (g_tasks[b].failed) addKeep(g_tasks[b].line, g_tasks[b].seq);
+            }
+            keepArr.sort(function (x, y) { return x.seq - y.seq; });
+            var keepLines = [];
+            for (var c = 0; c < keepArr.length; c++) keepLines.push(keepArr[c].line);
+            $("urlInput").value = keepLines.join("\n");
+            log("已自动清空转换成功的链接。");
+            if (keepLines.length > 0) log("失败链接已保留在输入框，可直接再次点击「开始转换」重试。");
+        } else {
+            log("检测到转换期间输入框被修改，已跳过自动清理链接。");
+        }
+
         if ($("openAfter").checked) {
             openFolder(g_outDir);
         }
@@ -708,6 +757,8 @@ function poll() {
 
     <div class="row">
         <span class="lbl">粘贴糖豆视频链接（每行一个，也可直接输入vid编号）：</span>
+        <button id="btnPaste" class="btn" onclick="pasteLinks()">粘贴</button>
+        <button id="btnClear" class="btn" onclick="clearLinks()">清理</button>
         <div class="hint">例如：https://www.tangdouddn.com/h5/play?vid=20000011230835 或 直接输入 20000011230835</div>
         <textarea id="urlInput" placeholder="在此粘贴糖豆视频分享链接，每行一个..."></textarea>
     </div>
