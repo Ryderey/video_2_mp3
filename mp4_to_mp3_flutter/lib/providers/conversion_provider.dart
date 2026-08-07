@@ -1,37 +1,15 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/conversion_task.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/file_service.dart';
+import '../utils/audio_filter.dart';
 
 /// 转换状态管理（业务层）
 /// 职责：生成 FFmpeg 命令参数、管理任务状态机、统一错误信息封装。
 /// 不直接调用 FFmpegKit API，不处理 SAF URI 转换。
 class ConversionProvider extends ChangeNotifier {
   final FfmpegService _ffmpegService = FfmpegService();
-
-  // ===== 持久化 key =====
-  static const _keyUseCustomOutDir = 'use_custom_out_dir';
-  static const _keyOutputTreeUri = 'output_tree_uri';
-  static const _keyOutputDisplayName = 'output_display_name';
-
-  /// 从 SharedPreferences 恢复持久化设置
-  Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _useCustomOutDir = prefs.getBool(_keyUseCustomOutDir) ?? false;
-    _outputTreeUri = prefs.getString(_keyOutputTreeUri) ?? '';
-    _outputDisplayName = prefs.getString(_keyOutputDisplayName) ?? '';
-    notifyListeners();
-  }
-
-  /// 持久化输出目录设置
-  Future<void> _persistOutputDirSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_keyUseCustomOutDir, _useCustomOutDir);
-    await prefs.setString(_keyOutputTreeUri, _outputTreeUri);
-    await prefs.setString(_keyOutputDisplayName, _outputDisplayName);
-  }
 
   // ===== 文件选择状态 =====
   String _inputTreeUri = ''; // 输入文件夹 tree URI
@@ -44,9 +22,6 @@ class ConversionProvider extends ChangeNotifier {
   int _skipStart = 5;
   int _skipEnd = 3;
   bool _repeat2 = true;
-  bool _useCustomOutDir = false;
-  String _outputTreeUri = ''; // 输出目录 tree URI
-  String _outputDisplayName = '';
 
   // ===== 转换状态 =====
   bool _isConverting = false;
@@ -67,9 +42,6 @@ class ConversionProvider extends ChangeNotifier {
   int get skipStart => _skipStart;
   int get skipEnd => _skipEnd;
   bool get repeat2 => _repeat2;
-  bool get useCustomOutDir => _useCustomOutDir;
-  String get outputTreeUri => _outputTreeUri;
-  String get outputDisplayName => _outputDisplayName;
   bool get isConverting => _isConverting;
   int get completedCount => _completedCount;
   int get successCount => _successCount;
@@ -105,16 +77,6 @@ class ConversionProvider extends ChangeNotifier {
 
   set repeat2(bool value) {
     _repeat2 = value;
-    notifyListeners();
-  }
-
-  set useCustomOutDir(bool value) {
-    _useCustomOutDir = value;
-    if (!value) {
-      _outputTreeUri = '';
-      _outputDisplayName = '';
-    }
-    _persistOutputDirSettings();
     notifyListeners();
   }
 
@@ -170,18 +132,6 @@ class ConversionProvider extends ChangeNotifier {
     addLog('扫描完成: 发现 ${_mp4Files.length} 个 MP4 文件');
   }
 
-  /// 选择输出目录
-  Future<void> pickOutputDir() async {
-    final result = await FileService.pickOutputDir();
-    if (result == null) return;
-    _outputTreeUri = result.treeUri;
-    _outputDisplayName = result.displayName;
-    _useCustomOutDir = true;
-    _persistOutputDirSettings();
-    addLog('输出目录: ${result.displayName}');
-    notifyListeners();
-  }
-
   /// 清零高级选项
   void resetAdvanced() {
     _skipStart = 0;
@@ -198,30 +148,6 @@ class ConversionProvider extends ChangeNotifier {
       _logs = _logs.sublist(_logs.length - 400);
     }
     notifyListeners();
-  }
-
-  /// 构建音频滤镜链（业务层：纯参数生成）
-  static String buildAudioFilter({
-    required int skipStart,
-    required int skipEnd,
-    required bool repeat2,
-  }) {
-    final parts = <String>[];
-    if (skipStart > 0) {
-      parts.add('atrim=start=$skipStart');
-      parts.add('asetpts=PTS-STARTPTS');
-    }
-    if (skipEnd > 0) {
-      parts.add('areverse');
-      parts.add('atrim=start=$skipEnd');
-      parts.add('asetpts=PTS-STARTPTS');
-      parts.add('areverse');
-    }
-    if (repeat2) {
-      parts.add('aloop=loop=1:size=2000000000');
-      parts.add('asetpts=PTS-STARTPTS');
-    }
-    return parts.join(',');
   }
 
   /// 构建 FFmpeg 命令（业务层：生成参数，使用本地缓存路径）
@@ -241,7 +167,10 @@ class ConversionProvider extends ChangeNotifier {
   }
 
   /// 开始转换
-  Future<void> startConversion() async {
+  ///
+  /// [customOutputTreeUri] 自定义输出目录 tree URI（来自共享的 OutputDirProvider）；
+  /// 为空时输出到与源文件同目录。
+  Future<void> startConversion({String? customOutputTreeUri}) async {
     if (_mp4Files.isEmpty) return;
 
     _isConverting = true;
@@ -251,7 +180,7 @@ class ConversionProvider extends ChangeNotifier {
     _currentFileProgress = 0.0;
 
     // 确定输出 tree URI
-    final outTreeUri = _useCustomOutDir ? _outputTreeUri : _inputTreeUri;
+    final outTreeUri = customOutputTreeUri ?? _inputTreeUri;
 
     // 构建任务列表
     _tasks = _mp4Files.map((file) {
@@ -270,7 +199,7 @@ class ConversionProvider extends ChangeNotifier {
       repeat2: _repeat2,
     );
 
-    final outDesc = _useCustomOutDir ? _outputDisplayName : '与源文件同目录';
+    final outDesc = customOutputTreeUri != null ? '指定输出目录' : '与源文件同目录';
     addLog('---- 开始转换，共 ${_tasks.length} 个文件，音质 ${_bitrate}kbps ----');
     addLog('输出目录: $outDesc');
     if (_skipStart > 0) addLog('跳过前面 $_skipStart 秒');
@@ -376,9 +305,9 @@ class ConversionProvider extends ChangeNotifier {
   }
 
   /// 获取输出目录显示名（用于完成后提示）
-  String getOutputDisplayName() {
-    if (_useCustomOutDir && _outputDisplayName.isNotEmpty) {
-      return _outputDisplayName;
+  String getOutputDisplayName({String? customOutputDisplayName}) {
+    if (customOutputDisplayName != null && customOutputDisplayName.isNotEmpty) {
+      return customOutputDisplayName;
     }
     return _inputDisplayName;
   }

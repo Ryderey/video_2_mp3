@@ -66,6 +66,27 @@ class FfmpegService {
     }
   }
 
+  /// 获取网络媒体时长（秒），支持携带 Referer（糖豆 CDN 必需）。
+  /// 返回 null 表示无法获取（进度将不显示百分比）。
+  Future<double?> getNetworkMediaDuration(String url, {String? referer}) async {
+    try {
+      final command = referer != null
+          ? '-referer "$referer" "$url"'
+          : '"$url"';
+      final session =
+          await FFprobeKit.getMediaInformationFromCommand(command);
+      final information = session.getMediaInformation();
+      if (information == null) return null;
+
+      final durationStr = information.getDuration();
+      if (durationStr == null || durationStr.isEmpty) return null;
+
+      return double.tryParse(durationStr);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 执行 FFmpeg 命令（异步，带进度回调和超时）。
   ///
   /// [command] 完整的 ffmpeg 参数字符串（不含 "ffmpeg" 前缀）

@@ -103,6 +103,29 @@ class FileService {
     });
   }
 
+  /// 将缓存中的 MP3 文件保存到系统音乐目录（Music）
+  static Future<void> saveToMusicDir({
+    required String fileName,
+    required String cacheFilePath,
+  }) async {
+    await _channel.invokeMethod('saveToMusicDir', {
+      'fileName': fileName,
+      'cacheFilePath': cacheFilePath,
+    });
+  }
+
+  /// 确保拥有写入系统音乐目录的存储权限
+  /// API 29+ 无需权限直接返回 true；API 28 及以下按需申请 WRITE_EXTERNAL_STORAGE
+  static Future<bool> ensureStoragePermission() async {
+    try {
+      final granted =
+          await _channel.invokeMethod<bool>('ensureStoragePermission');
+      return granted ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// 释放 URI 持久化权限
   static Future<void> releasePermission(String uri) async {
     await _channel.invokeMethod('releasePermission', {'uri': uri});

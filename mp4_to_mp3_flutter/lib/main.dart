@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app_theme.dart';
 import 'providers/conversion_provider.dart';
+import 'providers/output_dir_provider.dart';
+import 'providers/tangdou_provider.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -24,8 +26,12 @@ class Mp4ToMp3App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ConversionProvider()..init(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ConversionProvider()),
+        ChangeNotifierProvider(create: (_) => OutputDirProvider()..init()),
+        ChangeNotifierProvider(create: (_) => TangdouProvider()..init()),
+      ],
       child: MaterialApp(
         title: 'MP4转MP3',
         debugShowCheckedModeBanner: false,

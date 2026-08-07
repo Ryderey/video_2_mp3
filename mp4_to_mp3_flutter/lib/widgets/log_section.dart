@@ -1,29 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/conversion_provider.dart';
 
-/// 日志显示区域
+/// 日志显示区域，两个 Tab 共用（纯参数化）
 class LogSection extends StatelessWidget {
-  const LogSection({super.key});
+  final List<String> logs;
+
+  const LogSection({super.key, required this.logs});
 
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 600;
     final logHeight = isTablet ? 240.0 : 160.0;
 
-    return Consumer<ConversionProvider>(
-      builder: (context, provider, child) {
-        return Container(
-          width: double.infinity,
-          height: logHeight,
-          decoration: BoxDecoration(
-            color: const Color(0xFF232A31),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF8A94A0), width: 2),
-          ),
-          child: LogListView(logs: provider.logs),
-        );
-      },
+    return Container(
+      width: double.infinity,
+      height: logHeight,
+      decoration: BoxDecoration(
+        color: const Color(0xFF232A31),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF8A94A0), width: 2),
+      ),
+      child: LogListView(logs: logs),
     );
   }
 }
