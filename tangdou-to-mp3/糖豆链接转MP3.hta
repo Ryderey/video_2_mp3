@@ -76,6 +76,13 @@
     }
     .btn-primary:hover { background: #f6851c; border-color: #e8770d; }
     .btn-primary[disabled] { background: #e3c9a6; border-color: #d9c2a0; color: #fff; cursor: default; }
+    .btn-danger {
+        background: #c0392b;
+        border-color: #a93226;
+        color: #fff;
+    }
+    .btn-danger:hover { background: #d24435; border-color: #c0392b; }
+    .btn-danger[disabled] { background: #e3b0aa; border-color: #d9a49e; color: #fff; cursor: default; }
     .path {
         display: inline-block;
         margin-left: 10px;
@@ -201,11 +208,14 @@ var g_ffmpeg   = "";
 var g_outDir   = "";
 var g_progress = "";
 var g_batch    = "";
+var g_tmp      = "";
 var g_timer    = null;
 var g_reported = 0;
 var g_total    = 0;
 var g_debugLog = "";
-var g_tasks    = [];   // {vid, title, url, outFile}
+var g_lastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
+var g_pollFails = 0;        // 轮询读取进度文件失败计数（排障用）
+var g_tasks    = [];   // {vid, title, url, outFile, errFile}
 
 // ================= 工具函数 =================
 function $(id) { return document.getElementById(id); }
@@ -362,14 +372,6 @@ function getVideoInfo(vid) {
     }
 }
 
-// 清晰度降级：替换为最低画质（只要音频，省流量）
-function downgradeUrl(url) {
-    if (/_[HV]\d+P/i.test(url)) {
-        return url.replace(/_[HV]\d+P/i, "_V360P");
-    }
-    return url;
-}
-
 // ================= 构建音频滤镜 =================
 function buildAudioFilter(skipStart, skipEnd, repeat2) {
     var parts = [];
@@ -425,9 +427,9 @@ function init() {
     g_appDir = resolveAppDir();
     g_debugLog = g_appDir + "\\debug.log";
     g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
-    var tmp = fso.GetSpecialFolder(2).Path;
-    g_progress = tmp + "\\tangdou_mp3_progress.log";
-    g_batch    = tmp + "\\tangdou_mp3_convert.bat";
+    g_tmp = fso.GetSpecialFolder(2).Path;
+    g_progress = g_tmp + "\\tangdou_mp3_progress.log";
+    g_batch    = g_tmp + "\\tangdou_mp3_convert.bat";
 
     // 默认输出目录 = 程序目录\Download
     g_outDir = g_appDir + "\\Download";
@@ -491,15 +493,16 @@ function startConvert() {
     var skipEnd = parseInt($("skipEnd").value, 10);
     if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
     var repeat2 = $("repeat2").checked;
-    var useLowQ = $("lowQuality").checked;
     var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
 
     // 界面状态
     $("btnStart").disabled = true;
+    $("btnStop").disabled = false;
     $("bar").style.width = "0%";
     $("status").innerText = "正在解析链接...";
     g_tasks = [];
     g_reported = 0;
+    g_pollFails = 0;
 
     log("---- 开始处理，共 " + vids.length + " 个链接 ----");
     log("输出目录: " + g_outDir);
@@ -519,12 +522,6 @@ function startConvert() {
             continue;
         }
 
-        var videoUrl = info.url;
-        if (useLowQ) {
-            videoUrl = downgradeUrl(videoUrl);
-            dbg("降级URL: " + videoUrl);
-        }
-
         // 生成安全文件名，重名加序号
         var baseName = safeName(info.title);
         if (baseName == "") baseName = "tangdou_" + info.vid;
@@ -536,11 +533,15 @@ function startConvert() {
         }
         usedNames[outName.toLowerCase()] = true;
 
+        var errFile = g_tmp + "\\tangdou_ffmpeg_err_" + g_tasks.length + ".log";
+        try { if (fso.FileExists(errFile)) fso.DeleteFile(errFile); } catch (e) {}
+
         g_tasks.push({
             vid: info.vid,
             title: info.title,
-            url: videoUrl,
-            outFile: g_outDir + "\\" + outName + ".mp3"
+            url: info.url,
+            outFile: g_outDir + "\\" + outName + ".mp3",
+            errFile: errFile
         });
         log("  [OK] " + info.title);
     }
@@ -550,6 +551,7 @@ function startConvert() {
         log("---- 所有链接解析失败，无法继续 ----");
         $("status").innerText = "解析失败";
         $("btnStart").disabled = false;
+        $("btnStop").disabled = true;
         return;
     }
 
@@ -563,11 +565,32 @@ function startConvert() {
     // 清理旧文件
     try { if (fso.FileExists(g_progress)) fso.DeleteFile(g_progress); } catch (e) {}
     try { if (fso.FileExists(g_batch)) fso.DeleteFile(g_batch); } catch (e) {}
-    writeAnsi(g_batch, batchContent);
 
-    // 运行批处理
-    wsh.Run("\"" + g_batch + "\"", 7, false);
+    // 运行批处理（0 = 隐藏 cmd 窗口，进度通过 progress 文件轮询）
+    try {
+        writeAnsi(g_batch, batchContent);
+        wsh.Run("\"" + g_batch + "\"", 0, false);
+    } catch (e) {
+        log("[错误] 启动转换任务失败: " + e.message);
+        $("status").innerText = "启动失败";
+        $("btnStart").disabled = false;
+        $("btnStop").disabled = true;
+        return;
+    }
+    g_lastProgressTime = new Date().getTime();
     g_timer = window.setInterval(poll, 600);
+}
+
+// ================= 手动停止转换 =================
+function stopConvert() {
+    // 强杀 ffmpeg，并按窗口标题杀掉批处理 cmd（标题在批处理内用 title 命令设置）
+    try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+    try { wsh.Run("taskkill /f /fi \"WINDOWTITLE eq TangdouMP3Batch\"", 0, true); } catch (e) {}
+    if (g_timer) { window.clearInterval(g_timer); g_timer = null; }
+    $("btnStop").disabled = true;
+    $("btnStart").disabled = false;
+    log("---- 用户手动停止了转换 ----");
+    $("status").innerText = "已停止";
 }
 
 // ================= 生成批处理 =================
@@ -576,6 +599,7 @@ function startConvert() {
 function buildBatch(bitrate, afilter) {
     var nl = "\r\n";
     var s = "@echo off" + nl;
+    s += "title TangdouMP3Batch" + nl;
     s += ">\"" + g_progress + "\" echo [START]" + nl;
 
     var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
@@ -584,12 +608,15 @@ function buildBatch(bitrate, afilter) {
         var t = g_tasks[i];
         var outPath = escPct(t.outFile);
         var safeUrl = escPct(t.url);
-        // ffmpeg 直接读取带签名的 HTTP 视频流（无需 Referer）
+        // 糖豆CDN强制校验 Referer，缺失时会被 302 到一个假的默认视频；
+        // -referer 无 CRLF 要求，比 -headers 对旧版 ffmpeg 更兼容；-rw_timeout 防止网络挂起无限等待
         var cmd = "\"" + g_ffmpeg + "\" -y"
+            + " -referer \"https://www.tangdoucdn.com/\""
+            + " -rw_timeout 30000000"
             + " -i \"" + safeUrl + "\""
             + " -vn" + afArg
             + " -acodec libmp3lame -ab " + bitrate + "k"
-            + " \"" + outPath + "\" >nul 2>&1";
+            + " \"" + outPath + "\" >nul 2>\"" + escPct(t.errFile) + "\"";
         s += cmd + nl;
         s += "if errorlevel 1 goto fail" + i + nl;
         s += ">>\"" + g_progress + "\" echo [OK]" + nl;
@@ -605,7 +632,11 @@ function buildBatch(bitrate, afilter) {
 // ================= 轮询进度 =================
 function poll() {
     var txt = readAllSafe(g_progress);
-    if (txt == null) return;
+    if (txt == null) {
+        g_pollFails++;
+        if (g_pollFails % 10 == 1) dbg("读取进度文件失败累计 " + g_pollFails + " 次（可能写入共享冲突，自动重试）");
+        return;
+    }
     var lines = txt.split(/\r?\n/);
     var ok = 0, fail = 0, done = false;
     var results = [];
@@ -620,12 +651,31 @@ function poll() {
     for (var k = g_reported; k < results.length && k < g_tasks.length; k++) {
         var tag = results[k] ? "[OK]  " : "[FAIL]";
         log(tag + " " + g_tasks[k].title + ".mp3");
+        if (!results[k]) {
+            // 失败时从 ffmpeg 的 stderr 捕获文件提取最后一行错误，便于排障
+            var errTxt = readAllSafe(g_tasks[k].errFile);
+            if (errTxt != null) {
+                var el = errTxt.split(/\r?\n/);
+                for (var j = el.length - 1; j >= 0; j--) {
+                    var t = el[j].replace(/^\s+|\s+$/g, "");
+                    if (t != "") { log("  原因: " + t); break; }
+                }
+            }
+        }
     }
+    if (results.length > g_reported) g_lastProgressTime = new Date().getTime();
     g_reported = results.length;
 
     var pct = g_total > 0 ? Math.floor(finished * 100 / g_total) : 0;
     $("bar").style.width = pct + "%";
     $("status").innerText = finished + " / " + g_total + " 已完成";
+
+    // 超时兜底：5 分钟无新进度则强杀 ffmpeg，让批处理跳过当前任务继续下一个
+    if (!done && (new Date().getTime() - g_lastProgressTime > 300000)) {
+        log("[超时] 当前视频下载/转换超过 5 分钟无响应，已强制跳过。");
+        try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+        g_lastProgressTime = new Date().getTime(); // 重置，给下一个任务重新计时
+    }
 
     if (done) {
         window.clearInterval(g_timer);
@@ -633,6 +683,7 @@ function poll() {
         $("bar").style.width = "100%";
         log("---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
         $("btnStart").disabled = false;
+        $("btnStop").disabled = true;
 
         if ($("openAfter").checked) {
             openFolder(g_outDir);
@@ -668,9 +719,7 @@ function poll() {
             <option value="192" selected>192 kbps</option>
             <option value="320">320 kbps</option>
         </select>
-        &nbsp;&nbsp;
-        <input type="checkbox" id="lowQuality" checked />
-        <label for="lowQuality">使用最低画质（省流量，只要声音不影响）</label>
+        <span class="unit">（糖豆CDN仅有单一画质，始终按原始画质下载）</span>
     </div>
 
     <div class="row">
@@ -699,6 +748,8 @@ function poll() {
 
     <div class="row">
         <button id="btnStart" class="btn btn-primary" onclick="startConvert()">开始转换</button>
+        &nbsp;&nbsp;
+        <button id="btnStop" class="btn btn-danger" onclick="stopConvert()" disabled>停止转换</button>
         &nbsp;&nbsp;
         <input type="checkbox" id="openAfter" checked />
         <label for="openAfter">完成后打开文件夹</label>
