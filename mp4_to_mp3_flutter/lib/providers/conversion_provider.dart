@@ -21,7 +21,7 @@ class ConversionProvider extends ChangeNotifier {
   bool _recursive = true;
   int _skipStart = 5;
   int _skipEnd = 3;
-  bool _repeat2 = true;
+  bool _repeat2 = false;
 
   // ===== 转换状态 =====
   bool _isConverting = false;
