@@ -403,6 +403,13 @@ function toggleAdv() {
     fitLog();
 }
 
+// 清零：重置跳过时间与重复拼接为初始值
+function resetAdv() {
+    $("skipStart").value = "0";
+    $("skipEnd").value = "0";
+    $("repeat2").checked = false;
+}
+
 // ================= 输出目录 =================
 function pickOutDir() {
     var shell = new ActiveXObject("Shell.Application");
@@ -788,8 +795,10 @@ function poll() {
         <div class="advrow">
             跳过前面<input type="text" id="skipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
             &nbsp;&nbsp;&nbsp;&nbsp;
-            跳过后面<input type="text" id="skipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒
-            <span class="unit">（填 0 表示不跳过，只支持整数秒，默认跳过前5秒广告）</span>
+            跳过后面<input type="text" id="skipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒
+            <span class="unit">（填 0 表示不跳过，只支持整数秒，默认跳过前5秒、后3秒）</span>
+            &nbsp;&nbsp;
+            <button class="btn" onclick="resetAdv()">清零</button>
         </div>
         <div class="advrow">
             <input type="checkbox" id="repeat2" />
