@@ -20,10 +20,10 @@ class TangdouProvider extends ChangeNotifier {
   static const _keySkipEnd = 'tangdou_skip_end';
   static const _keyRepeat2 = 'tangdou_repeat2';
 
-  // ===== 设置（糖豆默认：跳过前 5 秒广告、不跳过末尾、不重复）=====
+  // ===== 设置（糖豆默认：跳过前 5 秒广告、默认跳过末尾 3 秒、不重复）=====
   int _bitrate = 192;
   int _skipStart = 5;
-  int _skipEnd = 0;
+  int _skipEnd = 3;
   bool _repeat2 = false;
 
   // ===== 输入与转换状态 =====
@@ -59,7 +59,7 @@ class TangdouProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _bitrate = prefs.getInt(_keyBitrate) ?? 192;
     _skipStart = prefs.getInt(_keySkipStart) ?? 5;
-    _skipEnd = prefs.getInt(_keySkipEnd) ?? 0;
+    _skipEnd = prefs.getInt(_keySkipEnd) ?? 3;
     _repeat2 = prefs.getBool(_keyRepeat2) ?? false;
     notifyListeners();
   }
