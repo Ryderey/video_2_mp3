@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>视频转 MP3</title>
+<HTA:APPLICATION
+    ID="oApp"
+    APPLICATIONNAME="VideoToMP3"
+    BORDERSTYLE="normal"
+    CAPTION="yes"
+    MAXIMIZEBUTTON="yes"
+    MINIMIZEBUTTON="yes"
+    SCROLL="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes" />
+<style type="text/css">
+    html, body { margin: 0; padding: 0; }
+    body {
+        font-family: "Microsoft YaHei", "SimHei", "SimSun", sans-serif;
+        font-size: 17px;
+        font-weight: bold;
+        line-height: 1.5;
+        background: #eef2f5;
+        color: #1c2733;
+        -ms-user-select: none;
+    }
+    /* ---- 顶部标题栏（通栏）---- */
+    #hdr {
+        background: #0d6e63;
+        color: #fff;
+        padding: 16px 26px;
+        border-bottom: 4px solid #0a574f;
+    }
+    #note {
+        display: inline-block;
+        vertical-align: middle;
+        width: 54px; height: 54px;
+        line-height: 52px;
+        text-align: center;
+        font-size: 30px;
+        background: #ffffff;
+        color: #0d6e63;
+        border-radius: 50%;
+        margin-right: 16px;
+    }
+    #hdrtxt { display: inline-block; vertical-align: middle; }
+    #title {
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        font-size: 30px;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+    #subtitle { font-size: 15px; color: #cfe8e4; }
+    /* ---- Tab 栏（标题栏正下方，大字号加粗）---- */
+    #tabs {
+        background: #0a574f;
+        padding: 12px 26px 0 26px;
+    }
+    .tab {
+        font-family: inherit;
+        font-size: 21px;
+        font-weight: bold;
+        padding: 12px 34px;
+        margin-right: 12px;
+        border: 2px solid #0a574f;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+        background: #bfe0db;
+        color: #0a574f;
+        cursor: pointer;
+        vertical-align: bottom;
+    }
+    .tab:hover { background: #d7ece9; }
+    .tab-on {
+        background: #e8770d;
+        border-color: #c9650a;
+        color: #fff;
+    }
+    .tab-on:hover { background: #f6851c; border-color: #e8770d; }
+    /* ---- 内容区 ---- */
+    .wrap { padding: 20px 26px; }
+    .row { margin-bottom: 16px; }
+    .lbl { font-weight: bold; }
+    /* ---- 按钮（大、易点）---- */
+    .btn {
+        font-family: inherit;
+        font-size: 18px;
+        font-weight: bold;
+        padding: 10px 24px;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #1c2733;
+        cursor: pointer;
+        vertical-align: middle;
+        transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: #e7f2f0; border-color: #0d6e63; }
+    .btn[disabled] { color: #a5adb5; background: #eef0f2; border-color: #cfd5da; cursor: default; }
+    .btn-primary {
+        background: #e8770d;
+        border-color: #c9650a;
+        color: #fff;
+        font-size: 20px;
+        padding: 12px 36px;
+    }
+    .btn-primary:hover { background: #f6851c; border-color: #e8770d; }
+    .btn-primary[disabled] { background: #e3c9a6; border-color: #d9c2a0; color: #fff; cursor: default; }
+    .btn-danger {
+        background: #c0392b;
+        border-color: #a93226;
+        color: #fff;
+        font-size: 20px;
+        padding: 12px 36px;
+    }
+    .btn-danger:hover { background: #d64535; border-color: #c0392b; }
+    .btn-danger[disabled] { background: #d4a5a0; border-color: #cbb0ac; color: #fff; cursor: default; }
+    /* ---- 路径文字 ---- */
+    .path {
+        display: inline-block;
+        margin-left: 10px;
+        color: #4a5560;
+        vertical-align: middle;
+        max-width: 520px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 16px;
+    }
+    /* ---- 下拉框 / 复选框（放大）---- */
+    select {
+        font-family: inherit;
+        font-size: 17px;
+        padding: 6px 8px;
+        border: 2px solid #8a94a0;
+        border-radius: 6px;
+        background: #fff;
+        vertical-align: middle;
+    }
+    input[type=checkbox] { zoom: 1.4; vertical-align: middle; }
+    label { vertical-align: middle; cursor: pointer; margin-left: 4px; margin-right: 16px; }
+    /* ---- 发现数量（大字突出）---- */
+    .found {
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        font-size: 24px;
+        font-weight: bold;
+        color: #0d6e63;
+    }
+    /* ---- 进度条（加粗）---- */
+    .barwrap {
+        width: 100%;
+        height: 28px;
+        border: 2px solid #8a94a0;
+        border-radius: 14px;
+        background: #fff;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    .bar {
+        height: 100%;
+        width: 0%;
+        background: #2f9e5f;
+        transition: width .3s;
+    }
+    .status { margin-top: 8px; font-size: 19px; font-weight: bold; color: #1c2733; }
+    /* ---- 日志 ---- */
+    .logbox {
+        width: 100%;
+        height: 160px;
+        box-sizing: border-box;
+        font-family: "Consolas", "Microsoft YaHei", monospace;
+        font-size: 15px;
+        line-height: 1.5;
+        resize: none;
+        background: #232a31;
+        color: #d7e0e8;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+    /* ---- 缺少 ffmpeg 横幅（两个 Tab 共享）---- */
+    #banner {
+        display: none;
+        background: #fdecea;
+        border: 2px solid #e0a5a0;
+        border-left: 8px solid #c0392b;
+        color: #a02015;
+        padding: 12px 16px;
+        margin: 0 0 16px 0;
+        border-radius: 8px;
+        font-size: 17px;
+        line-height: 1.6;
+    }
+    /* ---- 高级选项 ---- */
+    .btn-adv {
+        background: #f0f4f7;
+        border-color: #a5b0ba;
+        color: #3a4750;
+        font-size: 16px;
+        padding: 8px 18px;
+    }
+    .btn-adv:hover { background: #e4ecf2; border-color: #7d8a94; }
+    .advbox {
+        background: #f7fafc;
+        border: 2px solid #c3cdd5;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+    }
+    .advbox .advtitle {
+        font-weight: bold;
+        font-size: 17px;
+        color: #0d6e63;
+        margin-bottom: 12px;
+    }
+    .advrow { margin-bottom: 12px; font-size: 17px; }
+    .advrow .unit { margin-left: 8px; color: #6b7680; font-size: 15px; }
+    .num {
+        font-family: inherit;
+        font-size: 18px;
+        width: 72px;
+        padding: 6px 8px;
+        margin: 0 6px;
+        border: 2px solid #8a94a0;
+        border-radius: 6px;
+        text-align: center;
+        vertical-align: middle;
+        background: #fff;
+    }
+    /* ---- 糖豆链接输入框 ---- */
+    #tdUrlInput {
+        width: 100%;
+        height: 100px;
+        box-sizing: border-box;
+        font-family: "Consolas", "Microsoft YaHei", monospace;
+        font-size: 16px;
+        line-height: 1.6;
+        resize: vertical;
+        border: 2px solid #8a94a0;
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+    }
+    .hint { font-size: 15px; color: #6b7680; margin-top: 4px; }
+</style>
+
+<script language="JScript">
+// ================= 全局状态 =================
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var wsh = new ActiveXObject("WScript.Shell");
+
+// ---- 公共状态 ----
+var g_appDir       = "";   // HTA 所在目录
+var g_ffmpeg       = "";   // ffmpeg.exe 绝对路径
+var g_debugLog     = "";   // 调试日志文件路径（默认不写入）
+var g_settingsFile = "";   // 程序目录下 settings.ini 路径（两 Tab 设置持久化）
+var g_curTab       = "local"; // 当前激活的 Tab: local / tangdou
+
+// ---- 本地 Tab 状态（loc 前缀，与原 mp4-to-mp3 逻辑一一对应）----
+var locFolder   = "";      // 用户选择的文件夹
+var locFiles    = [];      // 待转换的 File 对象数组
+var locPickedFiles = [];   // "选择文件"模式下累积的文件路径数组
+var locTotal    = 0;
+var locProgress = "";      // 进度日志文件绝对路径
+var locBatch    = "";      // 临时批处理文件绝对路径
+var locTimer    = null;    // 轮询定时器
+var locReported = 0;       // 已在日志区显示过结果的文件数
+var locOutDir   = "";      // 自定义输出目录（为空=与源同目录）
+var locLastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
+
+// ---- 糖豆 Tab 状态（td 前缀，与原 tangdou-to-mp3 逻辑一一对应）----
+var tdOutDir    = "";      // 输出目录（默认 程序目录\Download）
+var tdProgress  = "";      // 进度日志文件绝对路径
+var tdBatch     = "";      // 临时批处理文件绝对路径
+var tdTmp       = "";      // 系统临时目录
+var tdTimer     = null;    // 轮询定时器
+var tdReported  = 0;
+var tdTotal     = 0;
+var tdLastProgressTime = 0; // 最后一次进度更新的时间戳（超时兜底用）
+var tdPollFails = 0;       // 轮询读取进度文件失败计数（排障用）
+var tdInputSnapshot = "";  // 转换开始时输入框内容快照（结束时判断能否自动清理）
+var tdKeepLines = [];      // 结束后需保留在输入框的失败行（API 解析阶段失败）
+var tdTasks     = [];      // {vid, title, url, outFile, errFile, line, seq}
+
+// ================= 公共工具函数（两个 Tab 共享，只保留一份）=================
+function $(id) { return document.getElementById(id); }
+
+// 公共日志写入：boxId 指定写入哪个面板的日志框（locLog / tdLog）
+function log(boxId, msg) {
+    var box = $(boxId);
+    box.value += msg + "\r\n";
+    box.scrollTop = box.scrollHeight;
+    dbg(msg);
+}
+
+// 调试日志：仅当勾选“记录调试日志”时，追加写入程序目录 debug.log
+// 文件超过 2MB 时截断头部（删除最旧内容），仅保留最新记录
+function dbg(msg) {
+    var cb = $("debugLog");
+    if (cb == null || !cb.checked) return;
+    try {
+        var MAX  = 2 * 1024 * 1024; // 2MB 触发阈值（按字节）
+        var TAIL = 200000;          // 截断后保留的最新字符数
+        if (fso.FileExists(g_debugLog) && fso.GetFile(g_debugLog).Size > MAX) {
+            var text = readAllSafe(g_debugLog) || "";
+            var cut = text.length - TAIL;
+            if (cut < 0) cut = 0;
+            var nl = text.indexOf("\r\n", cut); // 对齐到完整行边界，避免截断半行
+            if (nl >= 0) cut = nl + 2;
+            var tail = text.substring(cut);
+            var tw = fso.CreateTextFile(g_debugLog, true, false); // 覆盖重写
+            tw.WriteLine("[" + new Date().toLocaleString() + "] [日志超过 2MB，已截断旧内容，仅保留最新记录]");
+            tw.Write(tail);
+            tw.Close();
+        }
+        var ts = fso.OpenTextFile(g_debugLog, 8, true, false); // 8=追加, 不存在则创建, ANSI
+        ts.WriteLine("[" + new Date().toLocaleString() + "] " + msg);
+        ts.Close();
+    } catch (e) {}
+}
+
+// 切换调试日志开关：启用时写入环境与路径信息，便于确认真机上生效
+function onDebugToggle() {
+    if ($("debugLog").checked) {
+        dbg("===== 调试日志已启用 =====");
+        dbg("程序目录: " + g_appDir);
+        dbg("ffmpeg 路径: " + g_ffmpeg + "  存在=" + fso.FileExists(g_ffmpeg));
+        dbg("调试日志文件: " + g_debugLog);
+    }
+}
+
+// 从 window.location 反推 HTA 所在目录（兼容中文/空格路径）
+function resolveAppDir() {
+    try {
+        var href = window.location.href;
+        // 去掉 query string 和 fragment（HTA 可能被传入参数）
+        href = href.replace(/[?#].*$/, "");
+        href = decodeURIComponent(href);
+        var p = href.replace(/^file:\/*/i, "").replace(/\//g, "\\");
+        return fso.GetParentFolderName(p);
+    } catch (e) {
+        // 回退：用 location.pathname
+        try {
+            var p2 = decodeURIComponent(window.location.pathname).replace(/\//g, "\\");
+            return fso.GetParentFolderName(p2);
+        } catch (e2) {
+            return "";
+        }
+    }
+}
+
+// 设置窗口尺寸（HTA 不支持直接设宽高，用 JS 调整）
+function setWindowSize(w, h) {
+    window.resizeTo(w, h);
+    window.moveTo(Math.floor((screen.availWidth - w) / 2),
+                  Math.floor((screen.availHeight - h) / 2));
+}
+
+// 自适应日志区高度：随窗口大小变化，始终填满剩余空间
+// 两个面板各自的日志框都适配；隐藏面板（offset 为 0）跳过，切 Tab 时重新计算
+function fitLogBox(boxId) {
+    var el = $(boxId);
+    if (el == null) return;
+    if (el.offsetWidth == 0 && el.offsetHeight == 0) return; // 隐藏面板跳过
+    var rect = el.getBoundingClientRect();
+    var viewH = document.documentElement.clientHeight;
+    var h = viewH - rect.top - 20;
+    if (h < 90) h = 90;
+    el.style.height = h + "px";
+}
+
+function fitLog() {
+    fitLogBox("locLog");
+    fitLogBox("tdLog");
+}
+
+// Tab 切换：仅切换 display，两个面板各自保活（不打断进行中的转换）
+function switchTab(name) {
+    g_curTab = name;
+    $("panelLocal").style.display   = (name == "local") ? "block" : "none";
+    $("panelTangdou").style.display = (name == "tangdou") ? "block" : "none";
+    $("tabLocal").className   = (name == "local") ? "tab tab-on" : "tab";
+    $("tabTangdou").className = (name == "tangdou") ? "tab tab-on" : "tab";
+    fitLog();
+}
+
+// 转义批处理中的百分号（% 即使在引号内也会被 cmd 展开）
+function escPct(s) {
+    return s.replace(/%/g, "%%");
+}
+
+// 转换完成后打开输出所在文件夹
+function openFolder(path) {
+    try { wsh.Run("explorer.exe \"" + path + "\"", 1, false); } catch (e) {}
+}
+
+// 限制输入框只能输入整数（数字 0-9 与退格键）
+function onlyDigits() {
+    var k = event.keyCode;
+    if ((k >= 48 && k <= 57) || k == 8) return;
+    event.returnValue = false;
+}
+
+// 构建音频滤镜链（高级选项）
+// 顺序：先跳过片头 → 再跳过片尾 → 最后重复拼接（即剪切后再拼接）
+function buildAudioFilter(skipStart, skipEnd, repeat2) {
+    var parts = [];
+    if (skipStart > 0) {
+        parts.push("atrim=start=" + skipStart);
+        parts.push("asetpts=PTS-STARTPTS");
+    }
+    if (skipEnd > 0) {
+        // 反转→裁掉前 E 秒（即原来的后 E 秒）→再反转回来
+        parts.push("areverse");
+        parts.push("atrim=start=" + skipEnd);
+        parts.push("asetpts=PTS-STARTPTS");
+        parts.push("areverse");
+    }
+    if (repeat2) {
+        // 在剪切结果的基础上再循环一遍，共播放 2 遍
+        parts.push("aloop=loop=1:size=2000000000");
+        parts.push("asetpts=PTS-STARTPTS");
+    }
+    return parts.join(",");
+}
+
+// 以系统 ANSI 码页写文件（兼容中文系统 GBK），第三参数 false = 非 Unicode
+function writeAnsi(path, content) {
+    var ts = fso.CreateTextFile(path, true, false);
+    ts.Write(content);
+    ts.Close();
+}
+
+function readAllSafe(path) {
+    try {
+        var ts = fso.OpenTextFile(path, 1, false); // 1 = ForReading, ANSI
+        var txt = ts.ReadAll();
+        ts.Close();
+        return txt;
+    } catch (e) {
+        return null; // 文件可能正被追加写入，跳过本次
+    }
+}
+
+// 去掉扩展名并换成 .mp3
+function toMp3Path(fullPath) {
+    var dot = fullPath.lastIndexOf(".");
+    var base = (dot > fullPath.lastIndexOf("\\")) ? fullPath.substring(0, dot) : fullPath;
+    return base + ".mp3";
+}
+
+// ================= settings.ini 持久化（一个文件两段，两 Tab 设置独立）=================
+// [Output]  本地 Tab：UseOutDir/OutDir
+// [Tangdou] 糖豆 Tab：OutDir（为空时回退默认 程序目录\Download）
+
+// 提取 INI 中指定段的内容（段头到下一个段头之间）
+function getIniSection(txt, name) {
+    var re = new RegExp("\\[" + name + "\\][\\s\\S]*?\\r?\\n([\\s\\S]*?)(?=\\r?\\n\\[|$)");
+    var m = txt.match(re);
+    return (m != null) ? m[1] : "";
+}
+
+// 保存时机与原逻辑一致：本地 Tab 改输出目录即存；糖豆 Tab 选目录/转换开始时存
+// 两段一起重写，保证互不覆盖
+function saveSettings() {
+    try {
+        if (g_settingsFile == "") return;
+        var s = "[Output]\r\n";
+        s += "UseOutDir=" + ($("locUseOutDir").checked ? "1" : "0") + "\r\n";
+        s += "OutDir=" + locOutDir + "\r\n";
+        s += "[Tangdou]\r\n";
+        s += "OutDir=" + tdOutDir + "\r\n";
+        writeAnsi(g_settingsFile, s);
+        if (!fso.FileExists(g_settingsFile)) {
+            log("locLog", "配置保存异常: 文件写入后不存在");
+        }
+    } catch (e) {
+        log("locLog", "配置保存失败: " + e.message);
+    }
+}
+
+function loadSettings() {
+    try {
+        if (g_settingsFile == "") return;
+        if (!fso.FileExists(g_settingsFile)) return;
+        var txt = readAllSafe(g_settingsFile);
+        if (!txt) { log("locLog", "配置文件读取失败"); return; }
+
+        // ---- [Output] 本地 Tab（INI 正则一律带 ^ 行首锚点，防 UseOutDir/OutDir 子串误匹配）----
+        var outSec = getIniSection(txt, "Output");
+        var mUse = outSec.match(/^UseOutDir=(\d)/m);
+        var mDir = outSec.match(/^OutDir=([^\r\n]*)/m);
+        var dir = (mDir && mDir[1]) ? mDir[1].replace(/[\s]+$/, "") : "";
+        if (dir && fso.FolderExists(dir)) {
+            locOutDir = dir;
+        } else if (dir) {
+            log("locLog", "配置的输出目录不存在: " + dir);
+        }
+        if (mUse && mUse[1] == "1" && locOutDir != "") {
+            $("locUseOutDir").checked = true;
+            $("locBtnOutDir").disabled = false;
+            $("locOutPath").innerText = locOutDir;
+            log("locLog", "已恢复输出目录: " + locOutDir);
+        }
+
+        // ---- [Tangdou] 糖豆 Tab（新增持久化；为空时回退默认 程序目录\Download）----
+        var tdSec = getIniSection(txt, "Tangdou");
+        var mTd = tdSec.match(/^OutDir=([^\r\n]*)/m);
+        var tdDir = (mTd && mTd[1]) ? mTd[1].replace(/[\s]+$/, "") : "";
+        if (tdDir && fso.FolderExists(tdDir)) {
+            tdOutDir = tdDir;
+            log("tdLog", "已恢复输出目录: " + tdOutDir);
+        } else if (tdDir) {
+            log("tdLog", "配置的输出目录不存在，使用默认: " + tdOutDir);
+        }
+    } catch (e) {
+        log("locLog", "加载配置失败: " + e.message);
+    }
+}
+
+// ================= 启动检测（公共 init）=================
+function init() {
+    // 默认窗口取可用屏幕的较大比例：大屏上足够大、小屏上不超出
+    var w = Math.floor(screen.availWidth * 0.92);
+    var h = Math.floor(screen.availHeight * 0.92);
+    if (w < 840) w = 840; // 下限，保证极小屏幕仍可用
+    if (h < 640) h = 640;
+    setWindowSize(w, h);
+    window.onresize = fitLog;
+    g_appDir = resolveAppDir();
+    g_debugLog = g_appDir + "\\debug.log";
+    g_ffmpeg = g_appDir + "\\bin\\ffmpeg.exe";
+
+    // 临时文件：两个 Tab 各用各的，互不冲突（与原工具保持一致）
+    var tmp = fso.GetSpecialFolder(2).Path; // 系统临时目录
+    locProgress = tmp + "\\mp4_to_mp3_progress.log";
+    locBatch    = tmp + "\\mp4_to_mp3_convert.bat";
+    tdTmp       = tmp;
+    tdProgress  = tmp + "\\tangdou_mp3_progress.log";
+    tdBatch     = tmp + "\\tangdou_mp3_convert.bat";
+
+    log("locLog", "程序目录: " + g_appDir);
+    g_settingsFile = g_appDir + "\\settings.ini";
+    log("locLog", "配置文件: " + g_settingsFile + (fso.FileExists(g_settingsFile) ? "（已存在）" : "（不存在）"));
+
+    // 糖豆默认输出目录 = 程序目录\Download（稍后 loadSettings 可能用配置覆盖）
+    tdOutDir = g_appDir + "\\Download";
+    loadSettings();
+    if (!fso.FolderExists(tdOutDir)) {
+        try { fso.CreateFolder(tdOutDir); } catch (e) {}
+    }
+    $("tdOutPath").innerText = tdOutDir;
+    log("tdLog", "程序目录: " + g_appDir);
+    log("tdLog", "输出目录: " + tdOutDir);
+
+    // ffmpeg 缺失：横幅提示 + 禁用两个 Tab 的开始按钮（共享一个 #banner）
+    if (fso.FileExists(g_ffmpeg)) {
+        log("locLog", "已找到 ffmpeg: bin\\ffmpeg.exe");
+        log("tdLog", "已找到 ffmpeg: bin\\ffmpeg.exe");
+    } else {
+        log("locLog", "[错误] 未找到 bin\\ffmpeg.exe");
+        log("locLog", "请下载 32 位静态版 ffmpeg，将 ffmpeg.exe 放入 bin 文件夹后重新打开本程序。");
+        log("tdLog", "[错误] 未找到 bin\\ffmpeg.exe");
+        log("tdLog", "请下载 32 位静态版 ffmpeg，将 ffmpeg.exe 放入 bin 文件夹后重新打开本程序。");
+        $("banner").style.display = "block";
+        $("locBtnStart").disabled = true;
+        $("locPick").disabled = true;
+        $("locPickFile").disabled = true;
+        $("tdBtnStart").disabled = true;
+    }
+    log("tdLog", '请在上方文本框中粘贴糖豆视频链接（每行一个），然后点击「开始转换」。');
+    fitLog();
+}
+
+// ==================================================================
+// ================= 本地视频转MP3 Tab（loc 前缀）==================
+// ==================================================================
+
+// 递归/非递归扫描 mp4
+function locScanFolder(path, recursive, arr) {
+    var folder = fso.GetFolder(path);
+    var fe = new Enumerator(folder.Files);
+    for (; !fe.atEnd(); fe.moveNext()) {
+        var file = fe.item();
+        if (/\.mp4$/i.test(file.Name)) arr.push(file);
+    }
+    if (recursive) {
+        var de = new Enumerator(folder.SubFolders);
+        for (; !de.atEnd(); de.moveNext()) {
+            locScanFolder(de.item().Path, true, arr);
+        }
+    }
+}
+
+// 计算某个 mp4 的输出 mp3 路径
+// 自定义目录：输出到 locOutDir，重名自动加序号避免覆盖
+// 否则：与源同目录同名
+function locComputeOutPath(file, used) {
+    if (locOutDir != "") {
+        var dot = file.Name.lastIndexOf(".");
+        var baseName = (dot > 0) ? file.Name.substring(0, dot) : file.Name;
+        var candidate = locOutDir + "\\" + baseName + ".mp3";
+        var n = 1;
+        while (used[candidate.toLowerCase()]) {
+            candidate = locOutDir + "\\" + baseName + "_" + n + ".mp3";
+            n++;
+        }
+        used[candidate.toLowerCase()] = true;
+        return candidate;
+    }
+    return toMp3Path(file.Path);
+}
+
+// 展开/收起高级选项面板
+function locToggleAdv() {
+    var box = $("locAdvBox");
+    var open = (box.style.display != "none");
+    box.style.display = open ? "none" : "block";
+    $("locBtnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
+    fitLog();
+}
+
+// 清零：重置跳过时间与重复拼接为初始值
+function locResetAdv() {
+    $("locSkipStart").value = "0";
+    $("locSkipEnd").value = "0";
+    $("locRepeat2").checked = false;
+}
+
+// “将原 MP4 移入回收站”开关：勾选时需二次确认，取消则恢复不勾选
+function locDeleteSrcToggle() {
+    var cb = $("locDeleteSrc");
+    if (cb.checked) {
+        var yes = confirm("【提示】勾选后，转换成功的 MP4 源文件将被移入回收站（可从回收站还原）。\n\n确定要勾选吗？");
+        if (!yes) cb.checked = false;
+    }
+}
+
+// ================= 选择文件夹 =================
+function locPickFolder() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "选择包含 MP4 文件的文件夹", 0);
+    if (folder == null) return;
+    var self = folder.Self;
+    if (self == null || self.Path == "") {
+        alert("无法读取该文件夹路径，请选择普通磁盘文件夹。");
+        return;
+    }
+    locFolder = self.Path;
+    $("locPath").innerText = locFolder;
+    // 切换到文件夹模式，清空文件选择累积
+    locPickedFiles = [];
+    try { $("locFilePicker").value = ""; } catch (e) {}
+    dbg("选择文件夹: " + locFolder);
+    locRescan();
+}
+
+// ================= 选择文件（Windows 原生文件对话框）=================
+// 通过隐藏的 <input type="file"> 触发，HTA 在 Local Machine zone
+// 下 picker.value 可读取完整路径。每次选一个文件，累积到列表中。
+// 注意：IE/HTA 中 files[i].name 仅返回文件名（无路径），不可用。
+function locPickFiles() {
+    var picker = $("locFilePicker");
+    try { picker.value = ""; } catch (e) {} // 清空，确保重复选同一文件也触发 onchange
+    picker.click();
+}
+
+function locOnFilesPicked() {
+    var picker = $("locFilePicker");
+    var p = "";
+    try { p = picker.value; } catch (e) {}
+    if (!p || !/\.mp4$/i.test(p)) return; // 用户取消或未选 mp4
+
+    // 去重：检查是否已在列表中
+    for (var i = 0; i < locPickedFiles.length; i++) {
+        if (locPickedFiles[i].toLowerCase() === p.toLowerCase()) {
+            dbg("文件已在列表中，跳过: " + p);
+            return;
+        }
+    }
+    locPickedFiles.push(p);
+
+    // 重建 locFiles（FSO File 对象数组），同时剔除无效路径
+    var selected = [];
+    var validPaths = [];
+    for (var j = 0; j < locPickedFiles.length; j++) {
+        try { selected.push(fso.GetFile(locPickedFiles[j])); validPaths.push(locPickedFiles[j]); } catch (e2) {
+            dbg("文件无效已移除: " + locPickedFiles[j]);
+        }
+    }
+    locPickedFiles = validPaths;
+    locFolder = ""; // 与"选择文件夹"模式互斥
+    locFiles = selected;
+    locTotal = locFiles.length;
+    $("locPath").innerText = "已选择 " + locTotal + " 个文件（继续点击可追加）";
+    $("locFound").innerText = "发现 " + locTotal + " 个 MP4 文件";
+    $("locBtnStart").disabled = false;
+    dbg("选择文件模式: 已累积 " + locTotal + " 个文件，新增: " + p);
+    for (var di = 0; di < locFiles.length; di++) dbg("  待转换[" + di + "]: " + locFiles[di].Path);
+}
+
+function locRescan() {
+    if (locFolder == "") return;
+    locFiles = [];
+    var recursive = $("locRecursive").checked;
+    locScanFolder(locFolder, recursive, locFiles);
+    locTotal = locFiles.length;
+    $("locFound").innerText = "发现 " + locTotal + " 个 MP4 文件";
+    $("locBtnStart").disabled = (locTotal == 0);
+    dbg("扫描结果: 递归=" + recursive + " 发现 " + locTotal + " 个 MP4");
+    for (var di = 0; di < locFiles.length; di++) dbg("  待转换[" + di + "]: " + locFiles[di].Path);
+    if (locTotal == 0) log("locLog", "该文件夹未发现 MP4 文件。");
+}
+
+// 切换“自定义输出目录”开关
+function locToggleOutDir() {
+    var on = $("locUseOutDir").checked;
+    $("locBtnOutDir").disabled = !on;
+    if (!on) {
+        locOutDir = "";
+        $("locOutPath").innerText = "（与源文件同目录）";
+    } else if (locOutDir == "") {
+        locPickOutDir();
+    }
+    saveSettings();
+}
+
+// 选择输出目录
+function locPickOutDir() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "选择 MP3 输出目录", 0);
+    if (folder == null) {
+        if (locOutDir == "") { $("locUseOutDir").checked = false; locToggleOutDir(); }
+        return;
+    }
+    var self = folder.Self;
+    if (self == null || self.Path == "") {
+        alert("无法读取该文件夹路径。");
+        return;
+    }
+    locOutDir = self.Path;
+    $("locOutPath").innerText = locOutDir;
+    saveSettings();
+}
+
+// ================= 生成批处理 =================
+function locBuildBatch(bitrate, afilter) {
+    var nl = "\r\n";
+    var s = "@echo off" + nl;
+    // 覆盖式创建进度文件，写入起始标记
+    s += ">\"" + locProgress + "\" echo [START]" + nl;
+    // 高级选项滤镜（为空则不加 -af）
+    var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+    var used = {};
+    for (var i = 0; i < locFiles.length; i++) {
+        // % 需转义为 %%，否则含 % 的路径会被 cmd 错误展开
+        var inPath = escPct(locFiles[i].Path);
+        var outPath = escPct(locComputeOutPath(locFiles[i], used));
+        s += "\"" + g_ffmpeg + "\" -y -i \"" + inPath + "\" -vn" + afArg + " -acodec libmp3lame -ab " + bitrate + "k \"" + outPath + "\" >nul 2>&1" + nl;
+        // 仅写入 [OK]/[FAIL] 标记，不含文件名，避免文件名中的 ) 提前关闭括号块
+        s += "if errorlevel 1 goto fail" + i + nl;
+        s += ">>\"" + locProgress + "\" echo [OK]" + nl;
+        s += "goto next" + i + nl;
+        s += ":fail" + i + nl;
+        s += ">>\"" + locProgress + "\" echo [FAIL]" + nl;
+        s += ":next" + i + nl;
+    }
+    s += ">>\"" + locProgress + "\" echo [DONE]" + nl;
+    return s;
+}
+
+// ================= 开始转换 =================
+function locStartConvert() {
+    if (locTotal == 0) { alert("请先选择 MP4 文件或文件夹。"); return; }
+    if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
+
+    var bitrate = $("locBitrate").value;
+
+    // 读取高级选项（非法/负数一律当作 0）
+    var skipStart = parseInt($("locSkipStart").value, 10);
+    if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
+    var skipEnd = parseInt($("locSkipEnd").value, 10);
+    if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
+    var repeat2 = $("locRepeat2").checked;
+    var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
+
+    // 校验自定义输出目录
+    if ($("locUseOutDir").checked && locOutDir == "") {
+        alert("请先选择 MP3 输出目录。");
+        return;
+    }
+
+    // 清理旧文件
+    try { if (fso.FileExists(locProgress)) fso.DeleteFile(locProgress); } catch (e) {}
+    try { if (fso.FileExists(locBatch)) fso.DeleteFile(locBatch); } catch (e) {}
+
+    var batchContent = locBuildBatch(bitrate, afilter);
+    dbg("转换参数: 音质=" + bitrate + "k 跳过前=" + skipStart + "s 跳过后面=" + skipEnd + "s 重复2遍=" + repeat2);
+    dbg("音频滤镜: " + (afilter != "" ? afilter : "(无)"));
+    dbg("输出目录: " + (locOutDir != "" ? locOutDir : "与源文件同目录"));
+    dbg("批处理文件: " + locBatch);
+    dbg("生成的批处理内容 >>>\r\n" + batchContent + "<<<");
+    writeAnsi(locBatch, batchContent);
+
+    // 界面状态
+    $("locBtnStart").disabled = true;
+    $("locPick").disabled = true;
+    $("locPickFile").disabled = true;
+    $("locBtnStop").disabled = false;
+    $("locBar").style.width = "0%";
+    $("locStatus").innerText = "0 / " + locTotal + " 已完成";
+    locReported = 0;
+    locLastProgressTime = new Date().getTime();
+    var outDesc = locOutDir != "" ? locOutDir : "与源文件同目录";
+    log("locLog", "---- 开始转换，共 " + locTotal + " 个文件，音质 " + bitrate + "kbps ----");
+    log("locLog", "输出目录: " + outDesc);
+    if (skipStart > 0) log("locLog", "跳过前面 " + skipStart + " 秒");
+    if (skipEnd > 0) log("locLog", "跳过后面 " + skipEnd + " 秒");
+    if (repeat2) log("locLog", "剪切后重复拼接成 2 遍");
+
+    // 隐藏窗口、不激活、异步运行批处理
+    wsh.Run("\"" + locBatch + "\"", 0, false);
+
+    // 轮询进度
+    locTimer = window.setInterval(locPoll, 500);
+}
+
+// ================= 手动停止转换 =================
+function locStopConvert() {
+    // 强杀 ffmpeg（批处理会因 ffmpeg 退出而继续，最终写入 [DONE]）
+    try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+    // 清除轮询
+    if (locTimer) { window.clearInterval(locTimer); locTimer = null; }
+    // 恢复界面
+    $("locBtnStop").disabled = true;
+    $("locBtnStart").disabled = (locTotal == 0);
+    $("locPick").disabled = false;
+    $("locPickFile").disabled = false;
+    log("locLog", "---- 用户手动停止了转换 ----");
+    $("locStatus").innerText = "已停止";
+}
+
+// ================= 轮询进度 =================
+function locPoll() {
+    var txt = readAllSafe(locProgress);
+    if (txt == null) return;
+    var lines = txt.split(/\r?\n/);
+    var ok = 0, fail = 0, done = false;
+    var results = [];   // 按完成顺序记录 true=成功 false=失败
+    for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        if (ln.indexOf("[OK]") == 0) { ok++; results.push(true); }
+        else if (ln.indexOf("[FAIL]") == 0) { fail++; results.push(false); }
+        else if (ln.indexOf("[DONE]") == 0) { done = true; }
+    }
+    var finished = ok + fail;
+
+    // 把新完成的文件（按顺序对应 locFiles）追加到日志区
+    for (var k = locReported; k < results.length && k < locFiles.length; k++) {
+        var tag = results[k] ? "[OK]  " : "[FAIL]";
+        log("locLog", tag + " " + locFiles[k].Name);
+    }
+    // 有新进度则刷新超时计时器
+    if (results.length > locReported) locLastProgressTime = new Date().getTime();
+    locReported = results.length;
+
+    var pct = locTotal > 0 ? Math.floor(finished * 100 / locTotal) : 0;
+    $("locBar").style.width = pct + "%";
+    $("locStatus").innerText = finished + " / " + locTotal + " 已完成";
+
+    // 超时兜底：5 分钟无新进度则强杀 ffmpeg，让批处理跳到下一个文件
+    if (!done && (new Date().getTime() - locLastProgressTime > 300000)) {
+        log("locLog", "[超时] 当前文件转换超过 5 分钟无响应，已强制跳过。");
+        try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+        locLastProgressTime = new Date().getTime(); // 重置，给下一个文件重新计时
+    }
+
+    if (done) {
+        window.clearInterval(locTimer);
+        locTimer = null;
+        $("locBtnStop").disabled = true;
+        $("locBar").style.width = "100%";
+        log("locLog", "---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
+        $("locPick").disabled = false;
+        $("locPickFile").disabled = false;
+
+        // 将成功转换的源 MP4 移入回收站（仅在勾选时；失败的不处理，避免丢失源文件）
+        var deleted = 0;
+        if ($("locDeleteSrc").checked) {
+            try {
+                var shellApp = new ActiveXObject("Shell.Application");
+                var rb = shellApp.Namespace(10); // 10 = 回收站 (ssfBITBUCKET)
+                if (rb != null) {
+                    for (var dk = 0; dk < results.length && dk < locFiles.length; dk++) {
+                        if (results[dk]) {
+                            try {
+                                rb.MoveHere(locFiles[dk].Path, 0x14); // 4=无进度框 + 16=全部“是”，静默移入
+                                deleted++;
+                                dbg("已移入回收站: " + locFiles[dk].Path);
+                            } catch (e) {
+                                dbg("移入回收站失败: " + locFiles[dk].Path);
+                            }
+                        }
+                    }
+                } else {
+                    dbg("无法获取回收站对象，跳过移入回收站");
+                }
+            } catch (e) {
+                dbg("移入回收站初始化失败");
+            }
+            if (deleted > 0) log("locLog", "已将 " + deleted + " 个成功转换的源 MP4 文件移入回收站");
+        }
+
+        if ($("locOpenAfter").checked) {
+            var openDir = locOutDir;
+            if (openDir == "") openDir = locFolder;
+            if (openDir == "" && locFiles.length > 0) {
+                try { openDir = fso.GetParentFolderName(locFiles[0].Path); } catch (e) {}
+            }
+            if (openDir != "") openFolder(openDir);
+        }
+
+        // 清理列表："选择文件"模式下移除已成功转换的文件，避免转换完成后
+        // 再追加新文件时把旧文件重复转换；失败的文件保留以便直接重试
+        // （文件夹模式由 locRescan() 重新扫描，无需处理）
+        if (locFolder == "") {
+            var remain = [];
+            for (var rk = 0; rk < locFiles.length; rk++) {
+                // 超出 results 范围（未完成）或转换失败的保留
+                if (rk >= results.length || !results[rk]) remain.push(locFiles[rk].Path);
+            }
+            locPickedFiles = remain;
+            locFiles = [];
+            for (var rj = 0; rj < remain.length; rj++) {
+                try { locFiles.push(fso.GetFile(remain[rj])); } catch (e3) {
+                    dbg("文件无效已移除: " + remain[rj]);
+                }
+            }
+            locTotal = locFiles.length;
+            $("locFound").innerText = "发现 " + locTotal + " 个 MP4 文件";
+            if (locTotal == 0) {
+                $("locPath").innerText = "（未选择）";
+                $("locBtnStart").disabled = true;
+            } else {
+                $("locPath").innerText = "剩余 " + locTotal + " 个未成功文件，可重试或继续添加";
+                $("locBtnStart").disabled = false;
+            }
+        } else {
+            $("locBtnStart").disabled = (locTotal == 0);
+        }
+        var delMsg = deleted > 0 ? "\n已将 " + deleted + " 个源文件移入回收站。" : "";
+        alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。" + delMsg);
+    }
+}
+
+// ==================================================================
+// ================= 糖豆链接转MP3 Tab（td 前缀）===================
+// ==================================================================
+
+// 过滤 Windows 非法文件名字符
+function tdSafeName(name) {
+    return name.replace(/[\\\/:*?"<>|()!]/g, "_").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+}
+
+// ================= vid 解析 =================
+function tdParseVid(input) {
+    input = input.replace(/^\s+|\s+$/g, "");
+    if (input == "") return null;
+    if (/^\d+$/.test(input)) return input;
+    var m = input.match(/[?&]vid=(\d+)/i);
+    if (m) return m[1];
+    // 尝试匹配路径中的纯数字段（兜底）
+    var m2 = input.match(/\/(\d{10,})/);
+    if (m2) return m2[1];
+    return null;
+}
+
+// ================= JSON 解析（IE8 兼容）=================
+function tdParseJson(text) {
+    try {
+        return eval("(" + text + ")");
+    } catch (e) {
+        return null;
+    }
+}
+
+// ================= 糖豆 API =================
+function tdGetVideoInfo(vid) {
+    var apiUrl = "http://api-h5.tangdou.com/sample/share/main?vid=" + vid;
+    dbg("请求API: " + apiUrl);
+    try {
+        var xhr = new ActiveXObject("WinHttp.WinHttpRequest.5.1");
+        xhr.Open("GET", apiUrl, false);
+        xhr.SetRequestHeader("Accept", "application/json, text/plain, */*");
+        xhr.SetRequestHeader("Accept-Language", "zh,zh-CN;q=0.9");
+        xhr.SetRequestHeader("Referer", "https://www.tangdoucdn.com/");
+        xhr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
+        xhr.Send();
+        dbg("API响应状态: " + xhr.Status);
+        if (xhr.Status != 200) {
+            return { error: "API请求失败，状态码: " + xhr.Status };
+        }
+        var json = tdParseJson(xhr.ResponseText);
+        if (json == null) {
+            return { error: "API返回数据解析失败" };
+        }
+        if (json.code != 0 && json.code != 200) {
+            return { error: "API返回错误: " + (json.msg || json.message || "未知错误") };
+        }
+        var data = json.data;
+        if (!data || !data.video_url) {
+            return { error: "API未返回视频地址（视频可能已删除）" };
+        }
+        var title = data.title || ("tangdou_" + vid);
+        var videoUrl = data.video_url;
+        dbg("视频标题: " + title);
+        dbg("原始URL: " + videoUrl);
+        return { title: title, url: videoUrl, vid: vid };
+    } catch (e) {
+        dbg("API异常: " + e.message);
+        return { error: "网络请求异常: " + e.message };
+    }
+}
+
+// ================= 高级选项 =================
+function tdToggleAdv() {
+    var box = $("tdAdvBox");
+    var open = (box.style.display != "none");
+    box.style.display = open ? "none" : "block";
+    $("tdBtnAdv").innerText = open ? "显示高级选项" : "收起高级选项";
+    fitLog();
+}
+
+// ================= 输出目录 =================
+function tdPickOutDir() {
+    var shell = new ActiveXObject("Shell.Application");
+    var folder = shell.BrowseForFolder(0, "选择 MP3 输出目录", 0);
+    if (folder == null) return;
+    var self = folder.Self;
+    if (self == null || self.Path == "") {
+        alert("无法读取该文件夹路径，请选择普通磁盘文件夹。");
+        return;
+    }
+    tdOutDir = self.Path;
+    $("tdOutPath").innerText = tdOutDir;
+    dbg("输出目录: " + tdOutDir);
+    saveSettings(); // 糖豆输出目录新增持久化：选目录即存
+}
+
+// ================= 解析输入 =================
+function tdParseInputs() {
+    var text = $("tdUrlInput").value;
+    var lines = text.split(/\r?\n/);
+    var items = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].replace(/^\s+|\s+$/g, "");
+        if (line == "") continue;
+        var vid = tdParseVid(line);
+        if (vid != null) {
+            items.push({ vid: vid, line: line });
+        } else {
+            log("tdLog", "[跳过] 无法识别的链接: " + line);
+        }
+    }
+    return items;
+}
+
+// ================= 粘贴 / 清理 =================
+function tdPasteLinks() {
+    var txt = "";
+    try { txt = window.clipboardData.getData("Text") || ""; } catch (e) {}
+    txt = txt.replace(/^\s+|\s+$/g, "");
+    if (txt == "") { alert("剪贴板中没有内容，请先在微信里复制视频链接。"); return; }
+    var box = $("tdUrlInput");
+    var cur = box.value;
+    if (cur != "" && !/\n$/.test(cur)) cur += "\n";
+    box.value = cur + txt;
+    log("tdLog", "已粘贴 " + txt.split(/\r?\n/).length + " 行链接。");
+}
+
+function tdClearLinks() {
+    $("tdUrlInput").value = "";
+    log("tdLog", "已清空链接输入框。");
+}
+
+// ================= 开始转换 =================
+function tdStartConvert() {
+    if (!fso.FileExists(g_ffmpeg)) { alert("未找到 bin\\ffmpeg.exe"); return; }
+
+    var vids = tdParseInputs();
+    if (vids.length == 0) {
+        alert("未找到有效的糖豆视频链接或vid编号。\n请粘贴包含 vid 参数的链接，或直接输入vid数字编号。");
+        return;
+    }
+
+    // 确保输出目录存在
+    if (!fso.FolderExists(tdOutDir)) {
+        try { fso.CreateFolder(tdOutDir); } catch (e) {
+            alert("无法创建输出目录: " + tdOutDir);
+            return;
+        }
+    }
+    saveSettings(); // 糖豆输出目录新增持久化：转换开始时存
+
+    var bitrate = $("tdBitrate").value;
+    var skipStart = parseInt($("tdSkipStart").value, 10);
+    if (isNaN(skipStart) || skipStart < 0) skipStart = 0;
+    var skipEnd = parseInt($("tdSkipEnd").value, 10);
+    if (isNaN(skipEnd) || skipEnd < 0) skipEnd = 0;
+    var repeat2 = $("tdRepeat2").checked;
+    var afilter = buildAudioFilter(skipStart, skipEnd, repeat2);
+
+    // 界面状态
+    $("tdBtnStart").disabled = true;
+    $("tdBtnStop").disabled = false;
+    $("tdBar").style.width = "0%";
+    $("tdStatus").innerText = "正在解析链接...";
+    tdTasks = [];
+    tdReported = 0;
+    tdPollFails = 0;
+    tdKeepLines = [];
+    tdInputSnapshot = $("tdUrlInput").value;
+
+    log("tdLog", "---- 开始处理，共 " + vids.length + " 个链接 ----");
+    log("tdLog", "输出目录: " + tdOutDir);
+    if (skipStart > 0) log("tdLog", "跳过前面 " + skipStart + " 秒");
+    if (skipEnd > 0) log("tdLog", "跳过后面 " + skipEnd + " 秒");
+    if (repeat2) log("tdLog", "剪切后重复拼接成 2 遍");
+
+    // 逐个调用 API 获取视频信息
+    var usedNames = {};
+    for (var i = 0; i < vids.length; i++) {
+        $("tdStatus").innerText = "正在解析 " + (i + 1) + " / " + vids.length + " ...";
+        log("tdLog", "[" + (i + 1) + "/" + vids.length + "] 解析 vid: " + vids[i].vid);
+
+        var info = tdGetVideoInfo(vids[i].vid);
+        if (info.error) {
+            log("tdLog", "  [失败] " + info.error);
+            tdKeepLines.push({ line: vids[i].line, seq: i });
+            continue;
+        }
+
+        // 生成安全文件名，重名加序号
+        var baseName = tdSafeName(info.title);
+        if (baseName == "") baseName = "tangdou_" + info.vid;
+        var outName = baseName;
+        var n = 1;
+        while (usedNames[outName.toLowerCase()]) {
+            outName = baseName + "_" + n;
+            n++;
+        }
+        usedNames[outName.toLowerCase()] = true;
+
+        var errFile = tdTmp + "\\tangdou_ffmpeg_err_" + tdTasks.length + ".log";
+        try { if (fso.FileExists(errFile)) fso.DeleteFile(errFile); } catch (e) {}
+
+        tdTasks.push({
+            vid: info.vid,
+            title: info.title,
+            url: info.url,
+            outFile: tdOutDir + "\\" + outName + ".mp3",
+            errFile: errFile,
+            line: vids[i].line,
+            seq: i
+        });
+        log("tdLog", "  [OK] " + info.title);
+    }
+
+    tdTotal = tdTasks.length;
+    if (tdTotal == 0) {
+        log("tdLog", "---- 所有链接解析失败，无法继续 ----");
+        $("tdStatus").innerText = "解析失败";
+        $("tdBtnStart").disabled = false;
+        $("tdBtnStop").disabled = true;
+        return;
+    }
+
+    log("tdLog", "成功解析 " + tdTotal + " 个视频，开始下载转换...");
+    $("tdStatus").innerText = "0 / " + tdTotal + " 已完成";
+
+    // 生成批处理
+    var batchContent = tdBuildBatch(bitrate, afilter);
+    dbg("批处理内容 >>>\r\n" + batchContent + "<<<");
+
+    // 清理旧文件
+    try { if (fso.FileExists(tdProgress)) fso.DeleteFile(tdProgress); } catch (e) {}
+    try { if (fso.FileExists(tdBatch)) fso.DeleteFile(tdBatch); } catch (e) {}
+
+    // 运行批处理（0 = 隐藏 cmd 窗口，进度通过 progress 文件轮询）
+    try {
+        writeAnsi(tdBatch, batchContent);
+        wsh.Run("\"" + tdBatch + "\"", 0, false);
+    } catch (e) {
+        log("tdLog", "[错误] 启动转换任务失败: " + e.message);
+        $("tdStatus").innerText = "启动失败";
+        $("tdBtnStart").disabled = false;
+        $("tdBtnStop").disabled = true;
+        return;
+    }
+    tdLastProgressTime = new Date().getTime();
+    tdTimer = window.setInterval(tdPoll, 600);
+}
+
+// ================= 手动停止转换 =================
+function tdStopConvert() {
+    // 强杀 ffmpeg，并按窗口标题杀掉批处理 cmd（标题在批处理内用 title 命令设置）
+    try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+    try { wsh.Run("taskkill /f /fi \"WINDOWTITLE eq TangdouMP3Batch\"", 0, true); } catch (e) {}
+    if (tdTimer) { window.clearInterval(tdTimer); tdTimer = null; }
+    $("tdBtnStop").disabled = true;
+    $("tdBtnStart").disabled = false;
+    log("tdLog", "---- 用户手动停止了转换 ----");
+    $("tdStatus").innerText = "已停止";
+}
+
+// ================= 生成批处理 =================
+// 使用 goto 跳转代替 if(...)else(...) 括号块，
+// 彻底避免 cmd.exe 对引号内 ) 字符的块解析陷阱
+function tdBuildBatch(bitrate, afilter) {
+    var nl = "\r\n";
+    var s = "@echo off" + nl;
+    s += "title TangdouMP3Batch" + nl;
+    s += ">\"" + tdProgress + "\" echo [START]" + nl;
+
+    var afArg = (afilter != "") ? " -af \"" + afilter + "\"" : "";
+
+    for (var i = 0; i < tdTasks.length; i++) {
+        var t = tdTasks[i];
+        var outPath = escPct(t.outFile);
+        var safeUrl = escPct(t.url);
+        // 糖豆CDN强制校验 Referer，缺失时会被 302 到一个假的默认视频；
+        // -referer 无 CRLF 要求，比 -headers 对旧版 ffmpeg 更兼容；-rw_timeout 防止网络挂起无限等待
+        var cmd = "\"" + g_ffmpeg + "\" -y"
+            + " -referer \"https://www.tangdoucdn.com/\""
+            + " -rw_timeout 30000000"
+            + " -i \"" + safeUrl + "\""
+            + " -vn" + afArg
+            + " -acodec libmp3lame -ab " + bitrate + "k"
+            + " \"" + outPath + "\" >nul 2>\"" + escPct(t.errFile) + "\"";
+        s += cmd + nl;
+        s += "if errorlevel 1 goto fail" + i + nl;
+        s += ">>\"" + tdProgress + "\" echo [OK]" + nl;
+        s += "goto next" + i + nl;
+        s += ":fail" + i + nl;
+        s += ">>\"" + tdProgress + "\" echo [FAIL]" + nl;
+        s += ":next" + i + nl;
+    }
+    s += ">>\"" + tdProgress + "\" echo [DONE]" + nl;
+    return s;
+}
+
+// ================= 轮询进度 =================
+function tdPoll() {
+    var txt = readAllSafe(tdProgress);
+    if (txt == null) {
+        tdPollFails++;
+        if (tdPollFails % 10 == 1) dbg("读取进度文件失败累计 " + tdPollFails + " 次（可能写入共享冲突，自动重试）");
+        return;
+    }
+    var lines = txt.split(/\r?\n/);
+    var ok = 0, fail = 0, done = false;
+    var results = [];
+    for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i];
+        if (ln.indexOf("[OK]") == 0) { ok++; results.push(true); }
+        else if (ln.indexOf("[FAIL]") == 0) { fail++; results.push(false); }
+        else if (ln.indexOf("[DONE]") == 0) { done = true; }
+    }
+    var finished = ok + fail;
+
+    for (var k = tdReported; k < results.length && k < tdTasks.length; k++) {
+        var tag = results[k] ? "[OK]  " : "[FAIL]";
+        log("tdLog", tag + " " + tdTasks[k].title + ".mp3");
+        if (!results[k]) {
+            tdTasks[k].failed = true;
+            // 失败时从 ffmpeg 的 stderr 捕获文件提取最后一行错误，便于排障
+            var errTxt = readAllSafe(tdTasks[k].errFile);
+            if (errTxt != null) {
+                var el = errTxt.split(/\r?\n/);
+                for (var j = el.length - 1; j >= 0; j--) {
+                    var t = el[j].replace(/^\s+|\s+$/g, "");
+                    if (t != "") { log("tdLog", "  原因: " + t); break; }
+                }
+            }
+        }
+    }
+    if (results.length > tdReported) tdLastProgressTime = new Date().getTime();
+    tdReported = results.length;
+
+    var pct = tdTotal > 0 ? Math.floor(finished * 100 / tdTotal) : 0;
+    $("tdBar").style.width = pct + "%";
+    $("tdStatus").innerText = finished + " / " + tdTotal + " 已完成";
+
+    // 超时兜底：5 分钟无新进度则强杀 ffmpeg，让批处理跳过当前任务继续下一个
+    if (!done && (new Date().getTime() - tdLastProgressTime > 300000)) {
+        log("tdLog", "[超时] 当前视频下载/转换超过 5 分钟无响应，已强制跳过。");
+        try { wsh.Run("taskkill /f /im ffmpeg.exe", 0, true); } catch (e) {}
+        tdLastProgressTime = new Date().getTime(); // 重置，给下一个任务重新计时
+    }
+
+    if (done) {
+        window.clearInterval(tdTimer);
+        tdTimer = null;
+        $("tdBar").style.width = "100%";
+        log("tdLog", "---- 全部结束：成功 " + ok + " 个，失败 " + fail + " 个 ----");
+        $("tdBtnStart").disabled = false;
+        $("tdBtnStop").disabled = true;
+
+        // 结束后自动清空转换成功的链接，仅保留失败链接便于重试
+        if ($("tdUrlInput").value == tdInputSnapshot) {
+            var keepArr = [];
+            var seen = {};
+            var addKeep = function (line, seq) {
+                if (seen[line]) return;
+                seen[line] = true;
+                keepArr.push({ line: line, seq: seq });
+            };
+            for (var a = 0; a < tdKeepLines.length; a++) addKeep(tdKeepLines[a].line, tdKeepLines[a].seq);
+            for (var b = 0; b < tdTasks.length; b++) {
+                if (tdTasks[b].failed) addKeep(tdTasks[b].line, tdTasks[b].seq);
+            }
+            keepArr.sort(function (x, y) { return x.seq - y.seq; });
+            var keepLines = [];
+            for (var c = 0; c < keepArr.length; c++) keepLines.push(keepArr[c].line);
+            $("tdUrlInput").value = keepLines.join("\n");
+            log("tdLog", "已自动清空转换成功的链接。");
+            if (keepLines.length > 0) log("tdLog", "失败链接已保留在输入框，可直接再次点击「开始转换」重试。");
+        } else {
+            log("tdLog", "检测到转换期间输入框被修改，已跳过自动清理链接。");
+        }
+
+        if ($("tdOpenAfter").checked) {
+            openFolder(tdOutDir);
+        }
+        alert("转换完成！\n成功 " + ok + " 个，失败 " + fail + " 个。\n\nMP3 保存在: " + tdOutDir);
+    }
+}
+</script>
+</head>
+
+<body onload="init()">
+    <div id="hdr">
+        <span id="note">&#9834;</span><span id="hdrtxt"><span id="title">视频转 MP3</span><br /><span id="subtitle">本地视频 / 糖豆链接，一键转成 MP3 音乐</span></span>
+    </div>
+
+    <!-- Tab 栏：两个工具切换，切 Tab 不打断进行中的转换 -->
+    <div id="tabs">
+        <button id="tabLocal" class="tab tab-on" onclick="switchTab('local')">本地视频转MP3</button><button id="tabTangdou" class="tab" onclick="switchTab('tangdou')">糖豆链接转MP3</button>
+    </div>
+
+    <div class="wrap">
+    <div id="banner">
+        <b>⚠ 缺少 ffmpeg.exe</b><br />
+        请下载 <b>32 位</b>静态版 ffmpeg，将 ffmpeg.exe 放入本程序目录下的 <b>bin</b> 文件夹，
+        然后重新打开本程序。
+    </div>
+
+    <div class="row">
+        <input type="checkbox" id="debugLog" onclick="onDebugToggle()" />
+        <label for="debugLog">记录调试日志（保存到程序目录 debug.log，排错用，默认关闭）</label>
+    </div>
+
+    <!-- ================= 本地视频转MP3 面板 ================= -->
+    <div id="panelLocal">
+        <div class="row">
+            <button id="locPick" class="btn" onclick="locPickFolder()">选择文件夹</button>
+            &nbsp;
+            <button id="locPickFile" class="btn" onclick="locPickFiles()">选择文件</button>
+            <span id="locPath" class="path">（未选择）</span>
+        </div>
+
+        <div class="row">
+            <span id="locFound" class="found">发现 0 个 MP4 文件</span>
+        </div>
+
+        <div class="row">
+            <span class="lbl">音质：</span>
+            <select id="locBitrate">
+                <option value="128">128 kbps</option>
+                <option value="192" selected>192 kbps</option>
+                <option value="320">320 kbps</option>
+            </select>
+            &nbsp;&nbsp;
+            <input type="checkbox" id="locRecursive" checked onclick="locRescan()" />
+            <label for="locRecursive">包含子文件夹</label>
+        </div>
+
+        <div class="row">
+            <input type="checkbox" id="locUseOutDir" onclick="locToggleOutDir()" />
+            <label for="locUseOutDir">输出到指定目录</label>
+            <button id="locBtnOutDir" class="btn" onclick="locPickOutDir()" disabled>选择目录</button>
+            <span id="locOutPath" class="path">（与源文件同目录）</span>
+        </div>
+
+        <div class="row">
+            <button id="locBtnAdv" class="btn btn-adv" onclick="locToggleAdv()">收起高级选项</button>
+        </div>
+
+        <div id="locAdvBox" class="advbox">
+            <div class="advtitle">高级选项（默认无需修改）</div>
+            <div class="advrow">
+                跳过前面<input type="text" id="locSkipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                跳过后面<input type="text" id="locSkipEnd" class="num" value="3" onkeypress="onlyDigits()" />秒
+                <span class="unit">（填 0 表示不跳过，只支持整数秒）</span>
+                &nbsp;&nbsp;
+                <button class="btn" onclick="locResetAdv()">清零</button>
+            </div>
+            <div class="advrow">
+                <input type="checkbox" id="locRepeat2" />
+                <label for="locRepeat2">剪切后再重复拼接成 2 遍</label>
+            </div>
+            <div class="advrow">
+                <input type="checkbox" id="locDeleteSrc" onclick="locDeleteSrcToggle()" />
+                <label for="locDeleteSrc">转换成功后将原 MP4 文件移入回收站（可在回收站还原）</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <button id="locBtnStart" class="btn btn-primary" onclick="locStartConvert()" disabled>开始转换</button>
+            &nbsp;&nbsp;
+            <button id="locBtnStop" class="btn btn-danger" onclick="locStopConvert()" disabled>停止转换</button>
+            &nbsp;&nbsp;
+            <input type="checkbox" id="locOpenAfter" checked />
+            <label for="locOpenAfter">完成后打开文件夹</label>
+        </div>
+
+        <div class="row">
+            <div class="barwrap"><div id="locBar" class="bar"></div></div>
+            <div id="locStatus" class="status">等待开始</div>
+        </div>
+
+        <div class="row">
+            <textarea id="locLog" class="logbox" readonly></textarea>
+        </div>
+    </div>
+
+    <!-- ================= 糖豆链接转MP3 面板 ================= -->
+    <div id="panelTangdou" style="display:none">
+        <div class="row">
+            <span class="lbl">粘贴糖豆视频链接（每行一个，也可直接输入vid编号）：</span>
+            <button id="tdPaste" class="btn" onclick="tdPasteLinks()">粘贴</button>
+            <button id="tdClear" class="btn" onclick="tdClearLinks()">清理</button>
+            <div class="hint">例如：https://www.tangdouddn.com/h5/play?vid=20000011230835 或 直接输入 20000011230835</div>
+            <textarea id="tdUrlInput" placeholder="在此粘贴糖豆视频分享链接，每行一个..."></textarea>
+        </div>
+
+        <div class="row">
+            <span class="lbl">音质：</span>
+            <select id="tdBitrate">
+                <option value="128">128 kbps</option>
+                <option value="192" selected>192 kbps</option>
+                <option value="320">320 kbps</option>
+            </select>
+            <span class="unit">（糖豆CDN仅有单一画质，始终按原始画质下载）</span>
+        </div>
+
+        <div class="row">
+            <span class="lbl">输出目录：</span>
+            <button id="tdBtnOutDir" class="btn" onclick="tdPickOutDir()">选择目录</button>
+            <span id="tdOutPath" class="path"></span>
+        </div>
+
+        <div class="row">
+            <button id="tdBtnAdv" class="btn btn-adv" onclick="tdToggleAdv()">收起高级选项</button>
+        </div>
+
+        <div id="tdAdvBox" class="advbox">
+            <div class="advtitle">高级选项（默认无需修改）</div>
+            <div class="advrow">
+                跳过前面<input type="text" id="tdSkipStart" class="num" value="5" onkeypress="onlyDigits()" />秒
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                跳过后面<input type="text" id="tdSkipEnd" class="num" value="0" onkeypress="onlyDigits()" />秒
+                <span class="unit">（填 0 表示不跳过，只支持整数秒，默认跳过前5秒广告）</span>
+            </div>
+            <div class="advrow">
+                <input type="checkbox" id="tdRepeat2" />
+                <label for="tdRepeat2">剪切后再重复拼接成 2 遍</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <button id="tdBtnStart" class="btn btn-primary" onclick="tdStartConvert()">开始转换</button>
+            &nbsp;&nbsp;
+            <button id="tdBtnStop" class="btn btn-danger" onclick="tdStopConvert()" disabled>停止转换</button>
+            &nbsp;&nbsp;
+            <input type="checkbox" id="tdOpenAfter" checked />
+            <label for="tdOpenAfter">完成后打开文件夹</label>
+        </div>
+
+        <div class="row">
+            <div class="barwrap"><div id="tdBar" class="bar"></div></div>
+            <div id="tdStatus" class="status">等待开始</div>
+        </div>
+
+        <div class="row">
+            <textarea id="tdLog" class="logbox" readonly></textarea>
+        </div>
+    </div>
+    </div>
+
+    <!-- 隐藏的文件选择器：必须放在 display:none 容器（Tab 面板）之外，否则 IE 下 click() 无法打开对话框 -->
+    <input type="file" id="locFilePicker" accept=".mp4,.MP4"
+           style="position:absolute;left:-9999px;top:-9999px;"
+           onchange="locOnFilesPicked()" />
+</body>
+</html>

@@ -1,0 +1,12 @@
+# ffmpeg 二进制（用户自行下载）
+bin/ffmpeg.exe
+bin/ffprobe.exe
+
+# 运行期生成的配置文件
+settings.ini
+
+# 输出目录（糖豆 Tab 默认下载目录）
+Download/
+
+# 调试日志
+debug.log
