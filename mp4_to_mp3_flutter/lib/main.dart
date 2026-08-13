@@ -36,6 +36,9 @@ class Mp4ToMp3App extends StatelessWidget {
         title: 'MP4转MP3',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.theme,
+        // 老年手机已开启系统放大模式，App 自身已用大字体适配，
+        // 锁定文字缩放为 1.0，避免系统缩放与 App 大字体叠加导致二次放大
+        builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
         home: const HomeScreen(),
       ),
     );
